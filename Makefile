@@ -1,6 +1,6 @@
 
-OBJS:= Prob_model.o ulec.o macopt.o  MatrixAlgebrac.o
-HEADERS=Prob_model.h ulec.h macopt.h Point.h Min.h
+OBJS:= ulec.o macopt.o  MatrixAlgebrac.o Quad_plus_line.o Line_model.o Sample.o
+HEADERS=Prob_model.h ulec.h macopt.h  Min.h Quad_plus_line.h Sample.h
 CXXFLAGS:=-O2
 
 all: linemin

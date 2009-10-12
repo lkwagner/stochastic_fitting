@@ -49,7 +49,6 @@ public:
 
   }
   
-  virtual void set_data(const vector <Point> & dat)=0;
   virtual ~Prob_model() { }
 };
 

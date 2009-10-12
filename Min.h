@@ -3,7 +3,7 @@
 
 #include "macopt.h"
 #include "Point.h"
-#include "Prob_model.h"
+#include "Line_model.h"
 #include <vector>
 #include <iostream>
 using namespace std;
@@ -22,7 +22,7 @@ public:
     
     double f=0;
     for(int i=0; i< c.size(); i++) c[i]=_p[i+1];
-    f=-mod->probability(c);
+    f=-mod->prob(*data, *fix, c);
     return f;
      
   }
@@ -53,7 +53,9 @@ public:
     macoptII(p,c.size());
   }
   
-  Prob_model * mod;
+  Line_model * mod;
+  const Line_data * data;
+  const Fix_information * fix;
   vector <double>  c; 
   
 };
