@@ -5,7 +5,7 @@ typedef vector<double>::const_iterator cdit_t;
 
 
 
-double Line_model::prob(const Line_data & data ,const Fix_information & fix, 
+const double Line_model::prob(const Line_data & data ,const Fix_information & fix, 
                         const vector <double> & c) { 
   vector <double> realc;
   if(fix.enforce) { 
@@ -21,7 +21,7 @@ double Line_model::prob(const Line_data & data ,const Fix_information & fix,
   
   for(cdit_t t=data.t.begin(), v=data.val.begin(), e=data.err.begin(); 
       t != data.t.end(); t++,v++,e++) { 
-    double fp=func(c,*t);
+    double fp=func(realc,*t);
     f-=(*v-fp)*(*v-fp)/(2*(*e)*(*e));
   }
   return f;
@@ -30,20 +30,22 @@ double Line_model::prob(const Line_data & data ,const Fix_information & fix,
 
 //------------------------------------------------------------------------------
 
-void Morse_model::minimum(const vector <double> & c, vector <double> & min) { 
+const void Morse_model::minimum(const vector <double> & c, vector <double> & min) { 
   assert(c.size() >=4);
   min.resize(1);
   min[0]=c[3];
 }
 
+//------------------------------------------------------------------------------
 
-double Morse_model::func(const vector <double> & c, double t) { 
+const double Morse_model::func(const vector <double> & c, double t) { 
   assert(c.size() >=4 );
   double tmp=1-exp(-c[2]*(t-c[3]));
   return c[0]+c[1]*tmp*tmp;
 }
+//------------------------------------------------------------------------------
 
-void Morse_model::generate_guess(const Line_data & data, const Fix_information & fix,
+const void Morse_model::generate_guess(const Line_data & data, const Fix_information & fix,
                                    vector <double> & c) { 
   if(fix.enforce==1) { 
     c.resize(1);
@@ -66,3 +68,16 @@ void Morse_model::generate_guess(const Line_data & data, const Fix_information &
   
   
 }
+
+//------------------------------------------------------------------------------
+
+const void Morse_model::convert_c(const Fix_information & fix, const vector <double> & c_in, 
+                                   vector <double> & c_out) { 
+  assert(c_in.size() >=1);
+  c_out.resize(4);
+  c_out[2]=c_in[0];
+  c_out[1]=fix.curve/(2.0*c_out[2]*c_out[2]);
+  c_out[0]=fix.valmin;
+  c_out[3]=fix.min;
+}
+

@@ -28,25 +28,28 @@ struct Fix_information {
 
 class Line_model { 
 public:
-  virtual void generate_guess(const Line_data &,const Fix_information &, vector <double> & c)=0;
-  virtual double prob(const Line_data & ,const Fix_information &, const vector <double> & c);
-  virtual void convert_c(const Fix_information &, const vector <double> & cin, 
-                         const vector <double> & cout) { error("fix not implemented\n"); } 
-  
+  virtual const void generate_guess(const Line_data &,const Fix_information &, vector <double> & c)=0;
+  virtual const double prob(const Line_data & ,const Fix_information &, const vector <double> & c);
+  virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
+                          vector <double> & c_out) { error("fix not implemented\n"); } 
+  virtual const int nparms(int fix)=0;
   //Note the c here is the full one, ie, without any fix. Use convert_c if you want 
   //to use this with fixes, same applies to the minimum..which you should know anyway
   //if you fix it!
-  virtual double func(const vector <double> & c, double t)=0 ;
-  virtual void minimum(const vector <double> & c, vector <double> & min)=0;
+  virtual const double func(const vector <double> & c, double t)=0 ;
+  virtual const void minimum(const vector <double> & c, vector <double> & min)=0;
 
 };
 
 
 class Morse_model: public Line_model { 
 public:
-  virtual void generate_guess(const Line_data &,const Fix_information &, vector <double> & c);
-  virtual void minimum(const vector <double> & c, vector <double> & min);
-  virtual double func(const vector <double> & c,double t);
+  virtual const void generate_guess(const Line_data &,const Fix_information &, vector <double> & c);
+  virtual const void minimum(const vector <double> & c, vector <double> & min);
+  virtual const int nparms(int fix) { if(fix) return 1; else return 4; }
+  virtual const double func(const vector <double> & c,double t);
+  virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
+                                vector <double> & c_out);
   
 };
 
