@@ -80,4 +80,52 @@ const void Morse_model::convert_c(const Fix_information & fix, const vector <dou
   c_out[0]=fix.valmin;
   c_out[3]=fix.min;
 }
+//###############################################################################
+
+const void Quadratic_model::minimum(const vector <double> & c, vector <double> & min) { 
+  assert(c.size() >=3);
+  min.resize(1);
+  min[0]=c[1];
+}
+
+//------------------------------------------------------------------------------
+
+const double Quadratic_model::func(const vector <double> & c, double t) { 
+  assert(c.size() >=3 );
+  return c[0]+(t-c[1])*(t-c[1])*c[2];
+}
+//------------------------------------------------------------------------------
+
+const void Quadratic_model::generate_guess(const Line_data & data, const Fix_information & fix,
+                                       vector <double> & c) { 
+  if(fix.enforce==1) { 
+    c.resize(0);
+  }
+  else { 
+    c.resize(4);
+    c[0]=data.val[0];
+    
+    c[2]=10.0*(rng.ulec()-0.5);
+    double avg=0;
+    
+    for(cdit_t t=data.t.begin(); t!= data.t.end(); t++) avg+=*t;
+    avg/=data.t.size();
+    c[1]=avg;
+    //cout << "guessing " << c[0] << " " << c[1] << " " << c[2] << " " << c[3] << endl;
+    
+  }
+  
+  
+}
+
+//------------------------------------------------------------------------------
+
+const void Quadratic_model::convert_c(const Fix_information & fix, const vector <double> & c_in, 
+                                  vector <double> & c_out) { 
+  assert(c_in.size() >=0);
+  c_out.resize(4);
+  c_out[2]=0.5*fix.curve;
+  c_out[0]=fix.valmin;
+  c_out[1]=fix.min;
+}
 

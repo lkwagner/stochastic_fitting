@@ -55,4 +55,16 @@ public:
 
 
 
+class Quadratic_model: public Line_model { 
+public:
+  virtual const void generate_guess(const Line_data &,const Fix_information &, vector <double> & c);
+  virtual const void minimum(const vector <double> & c, vector <double> & min);
+  virtual const int nparms(int fix) { if(fix) return 0; else return 3; }
+  virtual const double func(const vector <double> & c,double t);
+  virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
+                               vector <double> & c_out);
+  
+};
+
+
 #endif //LINE_MODEL_H_INCLUDED

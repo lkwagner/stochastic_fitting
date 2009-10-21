@@ -56,7 +56,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
     if(p > best_p ) { 
       best_c=opt.c;
       best_p=p;
-      if(1) { 
+      if(0) { 
         cout << "\n new best ";
         for(dit_t i=opt.c.begin(); i!= opt.c.end(); i++) cout << *i << " ";
         cout << p << endl;

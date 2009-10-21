@@ -27,9 +27,8 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
     c[i+1]=data[0].start_pos[i]*(1+.05*rng.gasdev());
   }
   for(int i=ndim; i < nparms_quad; i++) c[i]=30*(rng.ulec()-0.5);
-  
+
   set_fixes(data, c, fixes);
-  
   for(int i=0; i< nlines; i++) { 
     vector <double> c_tmp;
     models[i]->generate_guess(data[i],fixes[i],c_tmp);
@@ -49,6 +48,7 @@ void Quad_plus_line::set_fixes(const vector <Line_data> & data,
   assert(data.size()==fixes.size());
   vector <vector <double> > H; vector <double> m;
   get_minimum(c,ndim,m);
+
   get_hessian(c,ndim,H);
   for(int line=0; line< nlines; line++) {
     double vHv=0, xmHv=0,xmHxm=0;
@@ -61,8 +61,8 @@ void Quad_plus_line::set_fixes(const vector <Line_data> & data,
     }
     fixes[line].enforce=1;
     fixes[line].curve=2.0*vHv;
-    double tmin=xmHv/vHv;
-    fixes[line].valmin=c[0]+xmHxm+tmin*tmin*vHv-2.0*tmin*xmHv;
+    double tmin=-xmHv/vHv;
+    fixes[line].valmin=c[0]+xmHxm+tmin*tmin*vHv+2.0*tmin*xmHv;
     fixes[line].min=tmin;
   }
 }
@@ -84,8 +84,8 @@ void Quad_plus_line::get_hessian(const vector <double> & c, int ndim,
                                  vector <vector <double> > & H) { 
   H.resize(ndim);
   int count=ndim+1;
+  for(int i=0; i< ndim; i++) H[i].resize(ndim);
   for(int i=0; i<ndim; i++) { 
-    H[i].resize(ndim);
     for(int j=i; j< ndim; j++) { 
       H[i][j]=c[count++];
       H[j][i]=H[i][j];
