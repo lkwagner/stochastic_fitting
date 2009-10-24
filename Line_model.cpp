@@ -102,7 +102,7 @@ const void Quadratic_model::generate_guess(const Line_data & data, const Fix_inf
     c.resize(0);
   }
   else { 
-    c.resize(4);
+    c.resize(3);
     c[0]=data.val[0];
     
     c[2]=10.0*(rng.ulec()-0.5);

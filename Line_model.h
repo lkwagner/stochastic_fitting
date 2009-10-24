@@ -38,7 +38,7 @@ public:
   //if you fix it!
   virtual const double func(const vector <double> & c, double t)=0 ;
   virtual const void minimum(const vector <double> & c, vector <double> & min)=0;
-
+  
 };
 
 

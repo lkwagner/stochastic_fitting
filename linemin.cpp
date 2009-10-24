@@ -65,7 +65,7 @@ void generate_line(double range, int npts, Potential_energy_surface & pes,
   assert(data.start_pos.size()==pes.ndim());
   int ndim=pes.ndim();
   vector <double> x(ndim);
-  double sigma=.001;
+  double sigma=.01;
   for(int i=0; i< npts; i++) { 
     double t=(i-npts/2)*range/npts;
     for(int d=0; d< ndim; d++) { 
@@ -89,40 +89,6 @@ void generate_line(double range, int npts, Potential_energy_surface & pes,
 }
 
 //------------------------------------------------------------------
-void test_quad_plus_line(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models,
-                         vector <double> & c) { 
-  quad.generate_guess(data,models, c);
-  int niterate=1000;
-  vector <double> best_c=c;
-  
-  double best_p=-1e99;
-  
-  int nit=1000;
-  int nparms=c.size();
-  
-  for(int i=0; i< nit; i++) { 
-    Quad_opt opt(nparms,0,.1,50,1);
-    quad.generate_guess(data,models,opt.c);
-    opt.mod=&quad;    
-    opt.data=&data;
-    opt.models=&models;
-    opt.optimize();
-    double p=quad.prob(data, models,opt.c);
-    cout.flush();
-    //cout << "prob " << p << endl;
-    if(p > best_p ) { 
-      best_c=opt.c;
-      best_p=p;
-      if(0) { 
-        cout << "\n new best ";
-        for(dit_t i=opt.c.begin(); i!= opt.c.end(); i++) cout << *i << " ";
-        cout << p << endl;
-      }
-    }
-  }
-  c=best_c;
-  
-}
 
 //------------------------------------------------------------------
 
@@ -143,6 +109,10 @@ void update_directions(vector < vector < double> > & hess,
     }
   }
   EigenSystemSolverRealSymmetricMatrix(H,evals, Ev);
+
+  cout << "eigenvalues: ";
+  for(int i=0; i< n; i++) cout << evals(i) << " ";
+  cout << endl;
   
   cout << "New directions : " << endl;
   for(int i=0; i< n; i++) { 
@@ -156,7 +126,24 @@ void update_directions(vector < vector < double> > & hess,
 }
 
 //------------------------------------------------------------------
+void check_directions(Quad_plus_line & quad, vector <Line_model *> &  models,
+                      vector <Line_data> & datas, vector <double> & c) { 
+  int nfit=c.size();
+  double baseprob=quad.prob(datas, models, c);
+  double del=1e-6;
+  for(int i=0; i< nfit; i++) { 
+    c[i]+=del;
+    double plusprob=quad.prob(datas,models,c);
+    c[i]-=2.0*del;
+    double minusprob=quad.prob(datas,models,c);
+    c[i]+=del;
+    double curve=(plusprob+minusprob-2.0*baseprob)/(del*del);
+    cout << "curvature  " << i << " : " << curve << endl;
+  }
+}
 
+
+//------------------------------------------------------------------
 
 int main(int argc, char ** argv) { 
   Line_data data;
@@ -164,7 +151,10 @@ int main(int argc, char ** argv) {
   Quadratic_model mod;
   
   
-  int n=7;
+  int n=2;
+  if(argc > 1) { 
+    n=atoi(argv[1]);
+  }
   Potential_energy_surface pes;
   pes.gen_pes(n);
   data.start_pos.resize(n);
@@ -184,7 +174,7 @@ int main(int argc, char ** argv) {
   vector <double> c;
   vector <double> currmin(n);
   for(int i=0; i< n; i++) { currmin[i]=.1; } 
-  int nit=20; 
+  int nit=10; 
   vector < vector < double> > directions(n);
   for(int i=0; i < n; i++) directions[i].resize(n);
   for(int i=0; i< n; i++) 
@@ -208,22 +198,27 @@ int main(int argc, char ** argv) {
       datas.push_back(tdata);
       models.push_back(&mod);
     }
-    test_quad_plus_line(quad, datas,models,c);
-    vector <double> quadmin(n);
-    quad.get_minimum(c,n,quadmin);
-    vector < vector <double> > hess;
-    quad.get_hessian(c,n,hess);
-    
-    cout << "currmin_from_quad: ";
-    for(int i=0; i< n; i++) { cout << quadmin[i] << "  "; } 
-    cout << endl;
-    cout << "hessian: \n";
-    for(int i=0; i< n; i++) {
-      for(int j=0; j< n; j++) { cout << hess[i][j] << " "; }
+    //optimize_quad(quad, datas,models,c);
+    int use_quad=1;
+    if(use_quad) { 
+      sample(quad, datas, models, finfo);
+      c=finfo.cavg;
+      vector <double> quadmin(n);
+      quad.get_minimum(c,n,quadmin);
+      vector < vector <double> > hess;
+      quad.get_hessian(c,n,hess);
+      
+      cout << "currmin_from_quad: ";
+      for(int i=0; i< n; i++) { cout << quadmin[i] << "  "; } 
       cout << endl;
+      cout << "hessian: \n";
+      for(int i=0; i< n; i++) {
+        for(int j=0; j< n; j++) { cout << hess[i][j] << " "; }
+        cout << endl;
+      }
+      check_directions(quad, models, datas, c);
+      update_directions(hess,directions);
     }
-    update_directions(hess,directions);
-    
   }
   
 }

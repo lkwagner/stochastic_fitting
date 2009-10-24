@@ -22,11 +22,38 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
   
   int nparms_quad=1+ndim+(ndim+1)*ndim/2;
   c.resize(nparms_quad);
-  c[0]=data[0].val[0];
-  for(int i=0; i< ndim; i++) { 
-    c[i+1]=data[0].start_pos[i]*(1+.05*rng.gasdev());
+  int ndata=data.size();
+  double min_en=1e99;
+  vector <double> min_en_pos(ndim);
+  for(vector <Line_data>::const_iterator i=data.begin(); i!= data.end(); i++) { 
+    int nvals=i->val.size();
+    for(int j=0; j< nvals; j++) { 
+      if(i->val[j] < min_en) {
+        min_en=i->val[j];
+        for(int d=0; d<ndim; d++) { 
+          min_en_pos[d]=i->start_pos[d]+i->t[j]*i->direction[d];
+        }
+      }
+    }
   }
-  for(int i=ndim; i < nparms_quad; i++) c[i]=30*(rng.ulec()-0.5);
+  
+  //cout << "guessing minimum at: en " << min_en << " and pos ";
+  int count=0;
+  c[count++]=min_en;
+  for(int i=0; i< ndim; i++) { 
+    //c[i+1]= data[ndata-1].start_pos[i]*(1+.5*rng.gasdev());
+    c[count++]=min_en_pos[i];
+    //cout << min_en_pos[i] << " ";
+  }
+  //cout << endl;
+  Array2 <double> H(ndim, ndim);
+  generate_posdef_matrix(ndim,H);
+  assert(count==ndim+1);
+  for(int i=0; i< ndim; i++) { 
+    for(int j=i; j< ndim; j++) { 
+      c[count++]=H(i,j);
+    }
+  }
 
   set_fixes(data, c, fixes);
   for(int i=0; i< nlines; i++) { 
@@ -115,4 +142,35 @@ double Quad_plus_line::prob(const vector <Line_data> & data,
 }
 
 //-----------------------------------------------------------------------------
+#include "MatrixAlgebra.h"
 
+void generate_posdef_matrix(int n, Array2 <double> & C) { 
+  C.Resize(n,n);
+  Array2 <double> A(n,n), B(n,n), evecs(n,n);
+  Array1 <double> evals(n);
+
+  bool posdef=false;
+  do { 
+    for(int i=0; i< n; i++) { 
+      for(int j=i+1; j < n; j++) { 
+        A(i,j)=2.0*(rng.ulec()-0.5);
+        A(j,i)=0.0;
+      }
+      A(i,i)=5.0*rng.ulec()+0.5;
+    }
+    B=A;
+    TransposeMatrix(B,n);
+    MultiplyMatrices(A,B,C,n);
+    EigenSystemSolverRealSymmetricMatrix(C,evals,evecs);
+    posdef=true;
+    for(int i=0; i< n; i++) { 
+      //cout << evals(i) << " ";
+      if(evals(i) <= 0) {
+        posdef=false;
+        break;
+      }
+    }
+    //cout << endl;
+  }
+  while(!posdef) ;
+}

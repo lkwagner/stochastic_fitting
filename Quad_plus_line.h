@@ -15,7 +15,6 @@ public:
               const vector <double> & c);
   
   
-  
   void set_fixes(const vector <Line_data> & data, 
                  const vector <double> & c,
                  vector <Fix_information> & fixes);
@@ -24,6 +23,11 @@ public:
   void get_minimum(const vector <double> & c, int ndim, 
                    vector < double>  & m);
 
+  
 };
+
+#include "Array.h"
+
+void generate_posdef_matrix(int n, Array2 <double> & );
 
 #endif //QUAD_PLUS_LINE_H_INCLUDED

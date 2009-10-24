@@ -164,3 +164,178 @@ void sample(Line_model & mod, const Line_data & data, Fit_info & finfo,
   finfo.cer=vars;
 
 }
+
+
+//#############################################################################
+
+
+double curvature(Quad_plus_line & quad, vector <Line_model *> &  models,
+                      vector <Line_data> & datas, vector <double> & c) { 
+  int nfit=c.size();
+  double baseprob=quad.prob(datas, models, c);
+  double del=1e-6;
+  double totalcurve=0.0;
+  for(int i=0; i< nfit; i++) { 
+    c[i]+=del;
+    double plusprob=quad.prob(datas,models,c);
+    c[i]-=2.0*del;
+    double minusprob=quad.prob(datas,models,c);
+    c[i]+=del;
+    double curve=(plusprob+minusprob-2.0*baseprob)/(del*del);
+    totalcurve+=curve;
+    //cout << "curvature  " << i << " : " << curve << endl;
+  }
+  return totalcurve;
+}
+
+void optimize_quad(Quad_plus_line & quad, vector <Line_data> & data, 
+                    vector <Line_model *> & models,
+                         vector <double> & c) { 
+  quad.generate_guess(data,models, c);
+  vector <double> best_c=c;
+  
+  double best_p=-1e99;
+  double best_curve=curvature(quad,models, data, c);
+  int nit=1000;
+  int nparms=c.size();
+  
+  for(int i=0; i< nit; i++) { 
+    Quad_opt opt(nparms,0,.1,50,1);
+    quad.generate_guess(data,models,opt.c);
+    opt.mod=&quad;    
+    opt.data=&data;
+    opt.models=&models;
+    opt.optimize();
+    double p=quad.prob(data, models,opt.c);
+    double curve=curvature(quad, models, data, opt.c);
+    cout.flush();
+    //cout << "prob " << p << endl;
+    if(p > best_p  ) { 
+      best_c=opt.c;
+      best_p=p;
+      best_curve=curve;
+      if(1) { 
+        cout << "\n new best ";
+        for(dit_t i=opt.c.begin(); i!= opt.c.end(); i++) cout << *i << " ";
+        cout << p <<  "  " << curve << endl;
+      }
+    }
+  }
+  c=best_c;
+  
+}
+
+//------------------------------------------------------------------------------
+
+double gradient(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models,
+    const vector <double> & c, int d) { 
+  double prob=quad.prob(data, models, c);
+  double del=1e-12;
+  vector <double> tmpc=c;
+  tmpc[d]+=del;
+  double px=quad.prob(data,models, tmpc);
+  return (px-prob)/del;
+}
+
+//------------------------------------------------------------------------------
+
+void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models, 
+            Fit_info & finfo, int verbose) { 
+  Walker walker;
+  optimize_quad(quad,data, models, walker.c);
+  walker.prob=quad.prob(data, models, walker.c);
+  
+  int nstep=100000;
+  int warmup=nstep/3;
+  Walker nw=walker;
+  int nparms=walker.c.size();
+  vector <double> tmpc;
+  vector <double> tstep(nparms);
+  for(int p=0; p < nparms; p++) tstep[p]=2e-2;
+  double acc=0;
+  //cout << "initial probability " << walker.prob << endl;
+  vector <double> avgs(nparms);
+  vector <double> vars(nparms);
+  int navgpts=0;
+  for(dit_t i=avgs.begin(); i!= avgs.end(); i++) *i=0.0;
+  for(dit_t i=vars.begin(); i!= vars.end(); i++) *i=0.0;
+  vector <double> min, curve;
+  //quad.minimum(walker.c,min);
+  //int nminima=min.size();
+  finfo.min.resize(min.size());
+  finfo.minerr.resize(min.size());
+  for(dit_t i=finfo.min.begin(); i!= finfo.min.end(); i++) *i=0.0;
+  for(dit_t i=finfo.minerr.begin(); i!= finfo.minerr.end(); i++) *i=0.0;
+  
+  
+  for(int step=0; step < nstep; step++) { 
+    nw=walker;
+    for(int p=0; p < nparms; p++) { 
+      double ststep=sqrt(tstep[p]);
+      double ts=tstep[p];
+      double delta=1e-9;
+      double grad=gradient(quad, data, models, walker.c, p);
+      nw.c[p]=walker.c[p]+ststep*rng.gasdev()+ts*grad;
+      double ngrad=gradient(quad, data, models, nw.c,p);
+      nw.prob=quad.prob(data, models, nw.c);
+      
+      double diff=nw.c[p]-walker.c[p];
+      double num=-(-diff-ts*ngrad)*(-diff-ts*ngrad);
+      double den=-(diff-ts*grad)*(diff-ts*grad);
+      double accprob=exp(nw.prob-walker.prob+(num-den)/(2*ts));
+      if(accprob+rng.ulec()> 1.0) {
+        acc++;
+        walker=nw;
+        if(tstep[p] < 1.0) 
+          tstep[p]*=1.1;
+      }
+      else { 
+        nw.c=walker.c;
+        tstep[p]*=.9;
+      }
+    }
+    
+    if(step > warmup) { 
+      for(int p=0; p < nparms; p++) { 
+        double oldavg=avgs[p];
+        double oldvar=vars[p];
+        avgs[p]=oldavg+(walker.c[p]-oldavg)/(navgpts+1);
+        if(navgpts >0) { 
+          vars[p]=(1-1.0/navgpts)*oldvar+(navgpts+1)*(avgs[p]-oldavg)*(avgs[p]-oldavg);
+        }
+      }
+      /*
+      mod.minimum(walker.c,min);
+      for(int m=0; m < nminima; m++) { 
+        double oldmin=finfo.min[m];
+        double oldvar=finfo.minerr[m];
+        finfo.min[m]=oldmin+(min[m]-oldmin)/(navgpts+1);
+        if(navgpts > 0) { 
+          finfo.minerr[m]=(1-1.0/navgpts)*oldvar+(navgpts+1)*(finfo.min[m]-oldmin)*(finfo.min[m]-oldmin);
+        }
+      }
+      */
+      
+      navgpts++;
+    }
+  }
+  
+  for(int p=0; p < nparms; p++) 
+    vars[p]=sqrt(vars[p]);
+  
+  if(verbose) { 
+    cout << "acceptance " << acc/(nstep*nparms) << endl;
+    cout << "timesteps   avg   err" << endl;
+    for(int p=0; p < nparms; p++) {
+      cout << tstep[p]  << "  " << avgs[p] << "  " << vars[p] << endl;
+    }
+    cout << endl;
+    
+  }
+  
+  finfo.cavg=avgs;
+  finfo.cer=vars;
+  
+}
+
+
