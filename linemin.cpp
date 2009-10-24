@@ -174,7 +174,7 @@ int main(int argc, char ** argv) {
   vector <double> c;
   vector <double> currmin(n);
   for(int i=0; i< n; i++) { currmin[i]=.1; } 
-  int nit=10; 
+  int nit=30; 
   vector < vector < double> > directions(n);
   for(int i=0; i < n; i++) directions[i].resize(n);
   for(int i=0; i< n; i++) 

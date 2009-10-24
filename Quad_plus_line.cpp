@@ -130,7 +130,7 @@ double Quad_plus_line::prob(const vector <Line_data> & data,
   int nlines=data.size();
   set_fixes(data,c,fixes);
   double f=0;
-  int ndim=data[0].direction[0];
+  int ndim=data[0].direction[0].size();
   vector<double>::const_iterator i=c.begin()+1+ndim+(ndim+1)*ndim/2;
   for(int line=0; line < nlines; line++) {
     int n=models[line]->nparms(1);
