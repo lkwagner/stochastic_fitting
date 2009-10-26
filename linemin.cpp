@@ -72,11 +72,14 @@ void generate_line(double range, int npts, Potential_energy_surface & pes,
       x[d]=data.start_pos[d]+t*data.direction[d];
     }
     double f=pes.eval_pes(x);
-    data.t.push_back(t);
-    data.val.push_back(f+rng.gasdev()*sigma);
-    data.err.push_back(sigma);
+    Data_point pt;
+    pt.t=t;
+    pt.val=f+rng.gasdev()*sigma;
+    pt.inverr=1.0/sigma;
+    data.data.push_back(pt);
   }
   
+  /*
   
   for(dit_t t=data.t.begin(),v=data.val.begin(),e=data.err.begin();
       t!=data.t.end(); 
@@ -86,6 +89,7 @@ void generate_line(double range, int npts, Potential_energy_surface & pes,
   }
   cout << "gendata: \n";
   cout << "end " << endl;
+  */
 }
 
 //------------------------------------------------------------------
@@ -174,11 +178,12 @@ int main(int argc, char ** argv) {
   vector <double> c;
   vector <double> currmin(n);
   for(int i=0; i< n; i++) { currmin[i]=.1; } 
-  int nit=30; 
+  int nit=1; 
   vector < vector < double> > directions(n);
   for(int i=0; i < n; i++) directions[i].resize(n);
   for(int i=0; i< n; i++) 
     for(int j=0; j< n; j++) directions[i][j]= (i==j)?1.0:0.0;
+  
   for(int it=0; it < nit; it++) { 
     for(int d=0; d< n; d++) { 
       Line_data tdata;
@@ -198,10 +203,12 @@ int main(int argc, char ** argv) {
       datas.push_back(tdata);
       models.push_back(&mod);
     }
-    //optimize_quad(quad, datas,models,c);
+    //
     int use_quad=1;
     if(use_quad) { 
-      sample(quad, datas, models, finfo);
+      //optimize_quad(quad, datas,models,c);
+      if(it==0) quad.generate_guess(datas, models, c);
+      sample(quad, datas, models, finfo, c);
       c=finfo.cavg;
       vector <double> quadmin(n);
       quad.get_minimum(c,n,quadmin);

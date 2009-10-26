@@ -25,7 +25,8 @@ void sample(Line_model & mod, const Line_data & line, Fit_info & finfo,
 void optimize_quad(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models,
                    vector <double> & c);
 
+//startc can be a reasonable guess from a previous fit
 void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models, 
-            Fit_info & finfo, int verbose=1);
+            Fit_info & finfo, vector <double> & startc, int verbose=1);
 
 #endif //SAMPLE_H_INCLUDED

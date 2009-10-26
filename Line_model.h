@@ -6,13 +6,21 @@
 #include "Array.h"
 using namespace std;
 
+struct Data_point { 
+public:
+  double t;
+  double val;
+  double inverr;  // 1/sigma, which speeds us up quite a bit
+};
+
 class Line_data { 
 public:
   vector <double> direction; //the direction in which we searched (n-fold)
   vector <double> start_pos; 
-  vector <double> t;  //point n is start_pos+t*direction
-  vector <double> val;
-  vector <double> err; 
+  //vector <double> t;  //point n is start_pos+t*direction
+  //vector <double> val;
+  //vector <double> err; 
+  vector <Data_point> data;
 };
 
 struct Fix_information { 

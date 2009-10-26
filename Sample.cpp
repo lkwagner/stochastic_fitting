@@ -43,6 +43,8 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
   int nit=1000;
   int nparms=c.size();
   
+  
+  
   for(int i=0; i< nit; i++) { 
     Least_squares_opt opt(nparms,0,.1,50,1);
     mod.generate_guess(data,fix,opt.c);
@@ -189,35 +191,42 @@ double curvature(Quad_plus_line & quad, vector <Line_model *> &  models,
 }
 
 void optimize_quad(Quad_plus_line & quad, vector <Line_data> & data, 
+                   vector <Line_model *> & models,
+                   vector <double> & c) { 
+  int nparms=c.size();
+  Quad_opt opt(nparms,0,.1,50,1);
+  opt.c=c;
+  opt.mod=&quad;    
+  opt.data=&data;
+  opt.models=&models;
+  opt.optimize();
+  c=opt.c;
+}
+
+void shake_quad(Quad_plus_line & quad, vector <Line_data> & data, 
                     vector <Line_model *> & models,
                          vector <double> & c) { 
   quad.generate_guess(data,models, c);
   vector <double> best_c=c;
+  optimize_quad(quad, data, models, c);
+  double best_p=quad.prob(data,models, c);
   
-  double best_p=-1e99;
-  double best_curve=curvature(quad,models, data, c);
   int nit=1000;
   int nparms=c.size();
   
   for(int i=0; i< nit; i++) { 
-    Quad_opt opt(nparms,0,.1,50,1);
-    quad.generate_guess(data,models,opt.c);
-    opt.mod=&quad;    
-    opt.data=&data;
-    opt.models=&models;
-    opt.optimize();
-    double p=quad.prob(data, models,opt.c);
-    double curve=curvature(quad, models, data, opt.c);
+    quad.generate_guess(data,models,c);
+    optimize_quad(quad, data, models, c);
+    double p=quad.prob(data, models,c);
     cout.flush();
     //cout << "prob " << p << endl;
     if(p > best_p  ) { 
-      best_c=opt.c;
+      best_c=c;
       best_p=p;
-      best_curve=curve;
       if(1) { 
-        cout << "\n new best ";
-        for(dit_t i=opt.c.begin(); i!= opt.c.end(); i++) cout << *i << " ";
-        cout << p <<  "  " << curve << endl;
+        cout << " it " << i << " ";
+        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
+        cout << p  << endl;
       }
     }
   }
@@ -240,9 +249,12 @@ double gradient(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_m
 //------------------------------------------------------------------------------
 
 void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models, 
-            Fit_info & finfo, int verbose) { 
+            Fit_info & finfo, vector<double> & startc, int verbose) { 
   Walker walker;
-  optimize_quad(quad,data, models, walker.c);
+  quad.generate_guess(data, models, walker.c);
+  assert(startc.size()==walker.c.size());
+  walker.c=startc;
+  shake_quad(quad,data, models, walker.c);
   walker.prob=quad.prob(data, models, walker.c);
   
   int nstep=100000;

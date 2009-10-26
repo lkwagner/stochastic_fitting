@@ -7,7 +7,7 @@ typedef vector<double>::const_iterator cdit_t;
 
 const double Line_model::prob(const Line_data & data ,const Fix_information & fix, 
                         const vector <double> & c) { 
-  vector <double> realc;
+  static vector <double> realc;  //unsafe in multi-threaded operation, but makes us faster
   if(fix.enforce) { 
     convert_c(fix,c,realc);
   }
@@ -18,12 +18,20 @@ const double Line_model::prob(const Line_data & data ,const Fix_information & fi
   double f=0;
   assert(data.t.size()==data.val.size());
   assert(data.t.size()==data.err.size());
-  
+  double fp, t1;
+  for(vector <Data_point>::const_iterator i=data.data.begin(); 
+      i!=data.data.end(); i++) {
+    fp=func(realc,i->t);
+    t1=i->val-fp;
+    f-=t1*t1*0.5*(i->inverr)*(i->inverr);
+  }
+  /*
   for(cdit_t t=data.t.begin(), v=data.val.begin(), e=data.err.begin(); 
       t != data.t.end(); t++,v++,e++) { 
     double fp=func(realc,*t);
     f-=(*v-fp)*(*v-fp)/(2*(*e)*(*e));
   }
+   */
   return f;
 }
 
@@ -53,14 +61,14 @@ const void Morse_model::generate_guess(const Line_data & data, const Fix_informa
   }
   else { 
     c.resize(4);
-    c[0]=data.val[0];
+    c[0]=data.data[0].val;
     
     c[1]=10.0*(rng.ulec()-0.5);
     c[2]=10.0*(rng.ulec()-0.5);
     double avg=0;
     
-    for(cdit_t t=data.t.begin(); t!= data.t.end(); t++) avg+=*t;
-    avg/=data.t.size();
+    for(vector<Data_point>::const_iterator t=data.data.begin(); t!= data.data.end(); t++) avg+=t->t;
+    avg/=data.data.size();
     c[3]=avg;
     //cout << "guessing " << c[0] << " " << c[1] << " " << c[2] << " " << c[3] << endl;
 
@@ -103,13 +111,13 @@ const void Quadratic_model::generate_guess(const Line_data & data, const Fix_inf
   }
   else { 
     c.resize(3);
-    c[0]=data.val[0];
+    c[0]=data.data[0].val;
     
     c[2]=10.0*(rng.ulec()-0.5);
     double avg=0;
     
-    for(cdit_t t=data.t.begin(); t!= data.t.end(); t++) avg+=*t;
-    avg/=data.t.size();
+    for(vector<Data_point>::const_iterator t=data.data.begin(); t!= data.data.end(); t++) avg+=t->t;
+    avg/=data.data.size();
     c[1]=avg;
     //cout << "guessing " << c[0] << " " << c[1] << " " << c[2] << " " << c[3] << endl;
     

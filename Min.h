@@ -26,7 +26,7 @@ public:
     f=-mod->prob(*data, *fix, c);
     return f;
      
-  }
+  }  
   
   double dfunc(double * _p, double * _g) {
     int m=c.size()+1;

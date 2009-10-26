@@ -26,12 +26,12 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
   double min_en=1e99;
   vector <double> min_en_pos(ndim);
   for(vector <Line_data>::const_iterator i=data.begin(); i!= data.end(); i++) { 
-    int nvals=i->val.size();
+    int nvals=i->data.size();
     for(int j=0; j< nvals; j++) { 
-      if(i->val[j] < min_en) {
-        min_en=i->val[j];
+      if(i->data[j].val < min_en) {
+        min_en=i->data[j].val;
         for(int d=0; d<ndim; d++) { 
-          min_en_pos[d]=i->start_pos[d]+i->t[j]*i->direction[d];
+          min_en_pos[d]=i->start_pos[d]+i->data[j].t*i->direction[d];
         }
       }
     }
@@ -73,12 +73,38 @@ void Quad_plus_line::set_fixes(const vector <Line_data> & data,
   int ndim=data[0].direction.size();
   
   assert(data.size()==fixes.size());
-  vector <vector <double> > H; vector <double> m;
+  //static is thread-unsafe, but saves large amounts of time
+  static vector <vector <double> > H; 
+  static vector <double> m;
   get_minimum(c,ndim,m);
 
   get_hessian(c,ndim,H);
   for(int line=0; line< nlines; line++) {
     double vHv=0, xmHv=0,xmHxm=0;
+    
+    /*
+    vector<double>::const_iterator di,dj,hij,mi,mj,starti,startj;
+    di=data[line].direction.begin();
+    mi=m.begin();
+    starti=data[line].start_pos.begin();
+    for(int i=0; i< ndim; i++) { 
+      hij=H[i].begin();
+      dj=data[line].direction.begin();
+      mj=m.begin();
+      startj=data[line].start_pos.begin();
+      double Hvi=0,Hxmi=0;
+      for(int j=0; j< ndim; j++) { 
+        Hvi+=(*hij)*(*dj);
+        Hxmi+=(*hij)*(*startj-*mj);
+        hij++; startj++; dj++; mj++;
+      }
+      vHv+=(*di)*Hvi;
+      xmHv+=(*starti-*mi)*Hvi;
+      xmHxm+=(*starti-*mi)*Hxmi;
+      di++; mi++; starti++;
+    }
+    */
+    
     for(int i=0; i< ndim; i++) { 
       for(int j=0; j< ndim; j++) { 
         vHv+=data[line].direction[i]*H[i][j]*data[line].direction[j];
@@ -86,6 +112,7 @@ void Quad_plus_line::set_fixes(const vector <Line_data> & data,
         xmHxm+=(data[line].start_pos[i]-m[i])*H[i][j]*(data[line].start_pos[j]-m[j]);
       }
     }
+     
     fixes[line].enforce=1;
     fixes[line].curve=2.0*vHv;
     double tmin=-xmHv/vHv;
