@@ -104,13 +104,19 @@ void Quad_plus_line::set_fixes(const vector <Line_data> & data,
       di++; mi++; starti++;
     }
     */
-    
+    double tmp1,tmp2;
     for(int i=0; i< ndim; i++) { 
+      tmp1=tmp2=0.0;
       for(int j=0; j< ndim; j++) { 
-        vHv+=data[line].direction[i]*H[i][j]*data[line].direction[j];
-        xmHv+=(data[line].start_pos[i]-m[i])*H[i][j]*data[line].direction[j];
-        xmHxm+=(data[line].start_pos[i]-m[i])*H[i][j]*(data[line].start_pos[j]-m[j]);
+        //vHv+=data[line].direction[i]*H[i][j]*data[line].direction[j];
+        //xmHv+=(data[line].start_pos[i]-m[i])*H[i][j]*data[line].direction[j];
+        //xmHxm+=(data[line].start_pos[i]-m[i])*H[i][j]*(data[line].start_pos[j]-m[j]);
+        tmp1+=H[i][j]*data[line].direction[j];
+        tmp2+=H[i][j]*(data[line].start_pos[j]-m[j]);
       }
+      vHv+=data[line].direction[i]*tmp1;
+      xmHv+=(data[line].start_pos[i]-m[i])*tmp1;
+      xmHxm+=(data[line].start_pos[i]-m[i])*tmp2;
     }
      
     fixes[line].enforce=1;

@@ -22,11 +22,6 @@ typedef vector<double>::iterator dit_t;
 
 
 
-void append_number(string & str, int num){
-  char strbuff[100];
-  sprintf(strbuff, "%d", num);
-  str+=strbuff;
-}
 
 //------------------------------------------------------------------
 /*
@@ -191,7 +186,7 @@ int main(int argc, char ** argv) {
       tdata.direction.resize(n);
       tdata.start_pos=currmin;
       tdata.direction=directions[d];
-      generate_line(1.0,20,pes,tdata);
+      generate_line(1.0,10,pes,tdata);
       sample(mod, tdata, finfo);
       for(int i=0; i< n; i++) { 
         currmin[i]+=finfo.min[0]*directions[d][i];

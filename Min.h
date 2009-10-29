@@ -83,10 +83,13 @@ public:
     double base=func(_p);
     double step=1e-8;
     for(int i=1; i< m; i++) {
+      double savep=_p[i];
       _p[i]+=step;
       double nwfunc=func(_p);
-      _p[i]-=step;
-      _g[i]=(nwfunc-base)/step;
+      _p[i]-=2.0*step;
+      double backfunc=func(_p);
+      _g[i]=(nwfunc-backfunc)/(2.0*step);
+      _p[i]=savep;
     }
     _g[0]=base;
     return base;
