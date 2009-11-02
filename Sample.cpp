@@ -176,27 +176,9 @@ void sample(Line_model & mod, const Line_data & data, Fit_info & finfo,
 //#############################################################################
 
 
-double curvature(Quad_plus_line & quad, vector <Line_model *> &  models,
-                      vector <Line_data> & datas, vector <double> & c) { 
-  int nfit=c.size();
-  double baseprob=quad.prob(datas, models, c);
-  double del=1e-6;
-  double totalcurve=0.0;
-  for(int i=0; i< nfit; i++) { 
-    c[i]+=del;
-    double plusprob=quad.prob(datas,models,c);
-    c[i]-=2.0*del;
-    double minusprob=quad.prob(datas,models,c);
-    c[i]+=del;
-    double curve=(plusprob+minusprob-2.0*baseprob)/(del*del);
-    totalcurve+=curve;
-    //cout << "curvature  " << i << " : " << curve << endl;
-  }
-  return totalcurve;
-}
 
 void optimize_quad(Quad_plus_line & quad, vector <Line_data> & data, 
-                   vector <Line_model *> & models,
+                   vector <Line_model *> & models, vector <Fix_information> & fixes,
                    vector <double> & c) { 
   int nparms=c.size();
   Quad_opt opt(nparms,0,.01,50,1);
@@ -209,21 +191,21 @@ void optimize_quad(Quad_plus_line & quad, vector <Line_data> & data,
 }
 
 void shake_quad(Quad_plus_line & quad, vector <Line_data> & data, 
-                    vector <Line_model *> & models,
+                    vector <Line_model *> & models, vector <Fix_information> & fixes,
                          vector <double> & c) { 
   quad.generate_guess(data,models, c);
   vector <double> best_c=c;
-  optimize_quad(quad, data, models, c);
-  double best_p=quad.prob(data,models, c);
+  optimize_quad(quad, data, models, fixes, c);
+  double best_p=quad.prob(data,models, c,fixes);
   cout << "initial probability " << best_p << endl;
-  int nit=1000;
-  //int nit=10;
+  //int nit=1000;
+  int nit=500;
   int nparms=c.size();
   
   for(int i=0; i< nit; i++) { 
     quad.generate_guess(data,models,c);
-    optimize_quad(quad, data, models, c);
-    double p=quad.prob(data, models,c);
+    optimize_quad(quad, data, models,fixes,c);
+    double p=quad.prob(data, models, c,fixes);
     cout.flush();
     //cout << "prob " << p << endl;
     if(p > best_p  ) { 
@@ -241,31 +223,40 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
 }
 
 //------------------------------------------------------------------------------
-
+/*
 double gradient(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models,
-    const vector <double> & c, int d) { 
-  double prob=quad.prob(data, models, c);
+                vector <Fix_information> & fixes,
+                const vector <double> & c, int d, double & prob) { 
+   prob=quad.del_prob(data, models, c,fixes);
   double del=1e-12;
   vector <double> tmpc=c;
   tmpc[d]+=del;
-  double px=quad.prob(data,models, tmpc);
+  double px=quad.prob(data,models, tmpc,fixes);
   return (px-prob)/del;
-}
+}*/
 
 //------------------------------------------------------------------------------
 
 int metropolis_step(Quad_plus_line & quad, vector <Line_data> & data, 
-                     vector <Line_model * > & models, vector <double> & tstep, 
+                     vector <Line_model * > & models, vector <Fix_information> & fixes,vector <double> & tstep, 
                      Walker & walker, int p) { 
   Walker nw=walker;
+  vector <Fix_information> savefixes=fixes;
   double ststep=sqrt(tstep[p]);
   double ts=tstep[p];
-  double delta=1e-9;
-  //double grad=0, ngrad=0;
-  double grad=gradient(quad, data, models, walker.c, p);
+  double del=1e-12;
+  vector <double> c=walker.c;
+  double del1=quad.delta_prob(data,models,fixes,c,p,walker.c[p]+del);
+  double grad=(del1-walker.prob)/del;
+  
+  //double grad=gradient(quad, data, models,fixes, walker.c, p,walker.prob);
   nw.c[p]=walker.c[p]+ststep*rng.gasdev()+ts*grad;
-  double ngrad=gradient(quad, data, models, nw.c,p);
-  nw.prob=quad.prob(data, models, nw.c);
+  //do it in this order so that the fixes are up to date on acceptance
+  double del2=quad.delta_prob(data,models,fixes,c,p,nw.c[p]+del);
+  nw.prob=quad.delta_prob(data,models,fixes,c,p,nw.c[p]);
+  double ngrad=(del2-nw.prob)/del;
+  //double ngrad=gradient(quad, data, models,fixes, nw.c,p,nw.prob);
+  //nw.prob=quad.prob(data, models, nw.c,fixes);
   
   double diff=nw.c[p]-walker.c[p];
   double num=-(-diff-ts*ngrad)*(-diff-ts*ngrad);
@@ -278,7 +269,8 @@ int metropolis_step(Quad_plus_line & quad, vector <Line_data> & data,
     return 1;
   }
   else { 
-    nw.c=walker.c;
+    //nw.c=walker.c;
+    fixes=savefixes;
     tstep[p]*=.9;
     return 0;
   }
@@ -287,86 +279,9 @@ int metropolis_step(Quad_plus_line & quad, vector <Line_data> & data,
 
 //------------------------------------------------------------------------------
 
+void write_paths(vector <Walker> & allwalkers) { 
+  int nparms=allwalkers[0].c.size();
 
-
-void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models, 
-            Fit_info & finfo, vector<double> & startc, int verbose) { 
-  int nconfig=100;
-  vector <Walker> configs(nconfig);
-  Walker walker;
-  quad.generate_guess(data, models, walker.c);
-  assert(startc.size()==walker.c.size());
-  walker.c=startc;
-  shake_quad(quad,data, models, walker.c);
-  walker.prob=quad.prob(data, models, walker.c);
-  
-  for(vector <Walker>::iterator i=configs.begin(); i!= configs.end(); i++)
-    *i=walker;
-  
-  int nstep=10000;
-  //int nstep=  10000;
-  int decorr=100;
-  int warmup=200;
-  //Walker nw=walker;
-  int nparms=walker.c.size();
-  vector <double> tmpc;
-  vector <double> tstep(nparms);
-  for(int p=0; p < nparms; p++) tstep[p]=2e-2;
-  double acc=0;
-  //cout << "initial probability " << walker.prob << endl;
-  vector <double> avgs(nparms);
-  vector <double> vars(nparms);
-  int navgpts=0;
-  for(dit_t i=avgs.begin(); i!= avgs.end(); i++) *i=0.0;
-  for(dit_t i=vars.begin(); i!= vars.end(); i++) *i=0.0;
-  vector <double> min, curve;
-  //quad.minimum(walker.c,min);
-  //int nminima=min.size();
-  finfo.min.resize(min.size());
-  finfo.minerr.resize(min.size());
-  for(dit_t i=finfo.min.begin(); i!= finfo.min.end(); i++) *i=0.0;
-  for(dit_t i=finfo.minerr.begin(); i!= finfo.minerr.end(); i++) *i=0.0;
-  vector <Walker> allwalkers;
-  
-  for(int step=0; step < nstep; step++) { 
-    //nw=walker;
-    for(vector<Walker>::iterator w=configs.begin(); w!=configs.end(); w++) { 
-      for(int p=0; p < nparms; p++) { 
-        if(metropolis_step(quad, data, models, tstep, *w, p)) acc++;
-      }
-    
-      if(step > warmup && step%decorr==0) { 
-        for(int p=0; p < nparms; p++) { 
-          double oldavg=avgs[p];
-          double oldvar=vars[p];
-          avgs[p]=oldavg+(w->c[p]-oldavg)/(navgpts+1);
-          if(navgpts >0) { 
-            vars[p]=(1-1.0/navgpts)*oldvar+(navgpts+1)*(avgs[p]-oldavg)*(avgs[p]-oldavg);
-          }
-        }
-        allwalkers.push_back(*w);
-        navgpts++;
-      }
-    }
-  }
-  
-  for(int p=0; p < nparms; p++) 
-    vars[p]=sqrt(vars[p]);
-  
-  if(verbose) { 
-    cout << "acceptance " << acc/(nstep*nparms) << endl;
-    cout << "timesteps   avg   err" << endl;
-    for(int p=0; p < nparms; p++) {
-      cout << tstep[p]  << "  " << avgs[p] << "  " << vars[p] << endl;
-    }
-    cout << endl;
-    
-  }
-  
-  finfo.cavg=avgs;
-  finfo.cer=vars;
-  
-  
   vector <double> min_c(nparms), max_c(nparms);
   for(int i=0; i< nparms; i++) { 
     min_c[i]=max_c[i]=allwalkers[0].c[i];
@@ -405,8 +320,8 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
       else { cout << "wierd pos " << pos << " c " << w->c[i]  << endl; }
     }
     pathout.close();
-     
-     
+    
+    
     
     int nwalkers=allwalkers.size();
     string outname="dist";
@@ -416,8 +331,137 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
       out << min_c[i]+j/(invsize*npoints) << "  " << counts[j]/nwalkers << endl;
     }
     out.close();
-     
+    
   }
+}
+
+
+//------------------------------------------------------------------------------
+
+void check_quad_model(Quad_plus_line & quad,vector <Line_data> &  data, 
+                      vector <Line_model *> & models, vector <Fix_information> & fixes,
+                      vector <double> & c) { 
+  int ndim=data[0].direction.size();
+  vector <double> m; vector <vector <double> > H;
+  quad.get_minimum(c,ndim,m);
+  
+  quad.get_hessian(c,ndim,H);
+  cout << "minima " << endl;
+  for(int i=0; i< ndim; i++) cout << m[i] << " ";
+  cout << endl;
+  cout << "Hessian " << endl;
+  for(int i=0; i < ndim; i++) {
+    for(int j=0;j < ndim; j++) cout << H[i][j] << " ";
+    cout << endl;
+  }
+  
+  int nparms=c.size();
+  double delx=0.01;
+  vector <double> real_dels(nparms);
+  double base=quad.prob(data,models,c,fixes);
+  for(int i=0; i< nparms; i++) { 
+    double tmp=c[i];
+    c[i]+=delx;
+    real_dels[i]=quad.prob(data,models, c,fixes);
+    c[i]=tmp;
+  }
+  quad.prob(data,models,c,fixes);
+
+  for(int i=1; i< nparms; i++) { 
+    double firstdel=quad.delta_prob(data, models, fixes,c,i,c[i]+delx);
+    double seconddel=quad.delta_prob(data,models, fixes, c,i,c[i]-delx);
+    cout << "real delta " << real_dels[i] << " delta " << firstdel << " diff " << real_dels[i]-firstdel
+    << endl;
+  }
+}
+
+
+//------------------------------------------------------------------------------
+
+void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models, 
+            Fit_info & finfo, vector<double> & startc, int verbose) { 
+  int nconfig=100;
+  vector <Walker> configs(nconfig);
+  vector <Fix_information> fixes;
+  
+  //check_quad_model(quad, data, models, fixes,startc);
+  //exit(1);
+  
+  Walker walker;
+  quad.generate_guess(data, models, walker.c);
+  assert(startc.size()==walker.c.size());
+  walker.c=startc;
+  shake_quad(quad,data, models, fixes, walker.c);
+  walker.prob=quad.prob(data, models, walker.c,fixes);
+  //exit(0);
+  
+  for(vector <Walker>::iterator i=configs.begin(); i!= configs.end(); i++)
+    *i=walker;
+  
+  //int nstep=10000;
+  int nstep=  100;
+  int decorr=100;
+  //int warmup=200;
+  int warmup=10;
+  int nparms=walker.c.size();
+  vector <double> tmpc;
+  vector <double> tstep(nparms);
+  for(int p=0; p < nparms; p++) tstep[p]=2e-2;
+  double acc=0;
+  vector <double> avgs(nparms);
+  vector <double> vars(nparms);
+  int navgpts=0;
+  for(dit_t i=avgs.begin(); i!= avgs.end(); i++) *i=0.0;
+  for(dit_t i=vars.begin(); i!= vars.end(); i++) *i=0.0;
+  vector <double> min, curve;
+  finfo.min.resize(min.size());
+  finfo.minerr.resize(min.size());
+  for(dit_t i=finfo.min.begin(); i!= finfo.min.end(); i++) *i=0.0;
+  for(dit_t i=finfo.minerr.begin(); i!= finfo.minerr.end(); i++) *i=0.0;
+  vector <Walker> allwalkers;
+  
+  for(int step=0; step < nstep; step++) { 
+    for(vector<Walker>::iterator w=configs.begin(); w!=configs.end(); w++) {
+      //update the fixes for this walker.
+      quad.prob(data,models,w->c,fixes);
+      for(int d=0; d< decorr; d++) { 
+        for(int p=0; p < nparms; p++) { 
+          if(metropolis_step(quad, data, models, fixes, tstep, *w, p)) acc++;
+        }
+      }
+    
+      if(step > warmup) { 
+        for(int p=0; p < nparms; p++) { 
+          double oldavg=avgs[p];
+          double oldvar=vars[p];
+          avgs[p]=oldavg+(w->c[p]-oldavg)/(navgpts+1);
+          if(navgpts >0) { 
+            vars[p]=(1-1.0/navgpts)*oldvar+(navgpts+1)*(avgs[p]-oldavg)*(avgs[p]-oldavg);
+          }
+        }
+        allwalkers.push_back(*w);
+        navgpts++;
+      }
+    }
+  }
+  
+  for(int p=0; p < nparms; p++) 
+    vars[p]=sqrt(vars[p]);
+  
+  if(verbose) { 
+    cout << "acceptance " << acc/(nstep*decorr*nparms) << endl;
+    cout << "timesteps   avg   err" << endl;
+    for(int p=0; p < nparms; p++) {
+      cout << tstep[p]  << "  " << avgs[p] << "  " << vars[p] << endl;
+    }
+    cout << endl;
+    
+  }
+  
+  finfo.cavg=avgs;
+  finfo.cer=vars;
+  write_paths(allwalkers);
+  
 }
 
 

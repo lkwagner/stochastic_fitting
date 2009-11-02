@@ -12,17 +12,22 @@ public:
   void generate_guess(const vector <Line_data> & data, const vector <Line_model *> & models,
                       vector <double> & c);
   double prob(const vector <Line_data> & data, const vector <Line_model * > & models,
-              const vector <double> & c);
+              const vector <double> & c, vector <Fix_information> & fixes);
+  double delta_prob(const vector <Line_data> & data, const vector <Line_model * > & models,   
+                    vector <Fix_information> & fixes,vector <double> & c, int p, double cp);
   
   
   void set_fixes(const vector <Line_data> & data, 
                  const vector <double> & c,
                  vector <Fix_information> & fixes);
+  void update_fixes(const vector <Line_data> & data, 
+                     vector <double> & c,
+                    vector <Fix_information> & fixes, int p, double cp);
   void get_hessian(const vector <double> & c, int ndim, 
                    vector < vector < double> > & H);
   void get_minimum(const vector <double> & c, int ndim, 
                    vector < double>  & m);
-
+    
   
 };
 

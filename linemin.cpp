@@ -125,46 +125,26 @@ void update_directions(vector < vector < double> > & hess,
 }
 
 //------------------------------------------------------------------
-void check_directions(Quad_plus_line & quad, vector <Line_model *> &  models,
-                      vector <Line_data> & datas, vector <double> & c) { 
-  int nfit=c.size();
-  double baseprob=quad.prob(datas, models, c);
-  double del=1e-6;
-  for(int i=0; i< nfit; i++) { 
-    c[i]+=del;
-    double plusprob=quad.prob(datas,models,c);
-    c[i]-=2.0*del;
-    double minusprob=quad.prob(datas,models,c);
-    c[i]+=del;
-    double curve=(plusprob+minusprob-2.0*baseprob)/(del*del);
-    cout << "curvature  " << i << " : " << curve << endl;
-  }
-}
-
 
 //------------------------------------------------------------------
 
 int main(int argc, char ** argv) { 
-  Line_data data;
-  Fit_info finfo;
-  Quadratic_model mod;
   
-  
+  int nit=15; 
   int n=2;
   if(argc > 1) { 
     n=atoi(argv[1]);
   }
+  if(argc > 2) { 
+    nit=atoi(argv[2]);
+  }
+  
+  
+  Fit_info finfo;
+  Quadratic_model mod;
+
   Potential_energy_surface pes;
   pes.gen_pes(n);
-  data.start_pos.resize(n);
-  data.direction.resize(n);
-  for(int i=0; i< n; i++) data.start_pos[i]=.1;
-  data.direction[0]=1.0;
-  generate_line(1.0,20,pes,data);
-  
-  
-  //sample(mod,data, finfo);
-  //finfo.print(cout);
   vector <Line_model *> models;
 
   vector <Line_data> datas;
@@ -173,7 +153,6 @@ int main(int argc, char ** argv) {
   vector <double> c;
   vector <double> currmin(n);
   for(int i=0; i< n; i++) { currmin[i]=.1; } 
-  int nit=1; 
   vector < vector < double> > directions(n);
   for(int i=0; i < n; i++) directions[i].resize(n);
   for(int i=0; i< n; i++) 
@@ -202,6 +181,7 @@ int main(int argc, char ** argv) {
     int use_quad=1;
     if(use_quad) { 
       //optimize_quad(quad, datas,models,c);
+      
       if(it==0) quad.generate_guess(datas, models, c);
       sample(quad, datas, models, finfo, c);
       c=finfo.cavg;
@@ -218,7 +198,6 @@ int main(int argc, char ** argv) {
         for(int j=0; j< n; j++) { cout << hess[i][j] << " "; }
         cout << endl;
       }
-      check_directions(quad, models, datas, c);
       update_directions(hess,directions);
     }
   }

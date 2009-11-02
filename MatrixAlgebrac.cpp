@@ -30,7 +30,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <math.h>
 #include "Array.h"
 #include "MatrixAlgebra.h"
-
+#ifdef USE_BLAS
+#ifdef __APPLE__
+#include "Accelerate/Accelerate.h"
+#else
+#include "cblas.h"
+#endif //__APPLE__
+#endif // USE_BLAS
 const doublevar TINY=1.0e-20;
 
 Array2 <doublevar> tmp2;
