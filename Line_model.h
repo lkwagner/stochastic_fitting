@@ -17,9 +17,6 @@ class Line_data {
 public:
   vector <double> direction; //the direction in which we searched (n-fold)
   vector <double> start_pos; 
-  //vector <double> t;  //point n is start_pos+t*direction
-  //vector <double> val;
-  //vector <double> err; 
   vector <Data_point> data;
 };
 
@@ -44,7 +41,7 @@ public:
   //Note the c here is the full one, ie, without any fix. Use convert_c if you want 
   //to use this with fixes, same applies to the minimum..which you should know anyway
   //if you fix it!
-  virtual const double func(const vector <double> & c, double t)=0 ;
+  virtual const double func(const vector <double> & c, double t) const = 0;
   virtual const void minimum(const vector <double> & c, vector <double> & min)=0;
   
 };
@@ -55,7 +52,7 @@ public:
   virtual const void generate_guess(const Line_data &,const Fix_information &, vector <double> & c);
   virtual const void minimum(const vector <double> & c, vector <double> & min);
   virtual const int nparms(int fix) { if(fix) return 1; else return 4; }
-  virtual const double func(const vector <double> & c,double t);
+  virtual const double  func(const vector <double> & c,double t) const ;
   virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
                                 vector <double> & c_out);
   
@@ -68,7 +65,7 @@ public:
   virtual const void generate_guess(const Line_data &,const Fix_information &, vector <double> & c);
   virtual const void minimum(const vector <double> & c, vector <double> & min);
   virtual const int nparms(int fix) { if(fix) return 0; else return 3; }
-  virtual const double func(const vector <double> & c,double t);
+  virtual const double  func(const vector <double> & c,double t) const;
   virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
                                vector <double> & c_out);
   

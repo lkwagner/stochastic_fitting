@@ -46,7 +46,7 @@ const void Morse_model::minimum(const vector <double> & c, vector <double> & min
 
 //------------------------------------------------------------------------------
 
-const double Morse_model::func(const vector <double> & c, double t) { 
+const double Morse_model::func(const vector <double> & c, double t) const { 
   assert(c.size() >=4 );
   double tmp=1-exp(-c[2]*(t-c[3]));
   return c[0]+c[1]*tmp*tmp;
@@ -67,7 +67,10 @@ const void Morse_model::generate_guess(const Line_data & data, const Fix_informa
     c[2]=10.0*(rng.ulec()-0.5);
     double avg=0;
     
-    for(vector<Data_point>::const_iterator t=data.data.begin(); t!= data.data.end(); t++) avg+=t->t;
+    for(vector<Data_point>::const_iterator t=data.data.begin(); t!= data.data.end(); t++) {
+      avg+=t->t;
+      if(c[0] < t->val) c[0]=t->val;
+    }
     avg/=data.data.size();
     c[3]=avg;
     //cout << "guessing " << c[0] << " " << c[1] << " " << c[2] << " " << c[3] << endl;
@@ -98,7 +101,7 @@ const void Quadratic_model::minimum(const vector <double> & c, vector <double> &
 
 //------------------------------------------------------------------------------
 
-const double Quadratic_model::func(const vector <double> & c, double t) { 
+const double Quadratic_model::func(const vector <double> & c, double t) const { 
   assert(c.size() >=3 );
   return c[0]+(t-c[1])*(t-c[1])*c[2];
 }
@@ -116,7 +119,10 @@ const void Quadratic_model::generate_guess(const Line_data & data, const Fix_inf
     c[2]=10.0*(rng.ulec()-0.5);
     double avg=0;
     
-    for(vector<Data_point>::const_iterator t=data.data.begin(); t!= data.data.end(); t++) avg+=t->t;
+    for(vector<Data_point>::const_iterator t=data.data.begin(); t!= data.data.end(); t++) {
+      avg+=t->t;
+      if(t->val < c[0]) c[0]=t->val;
+    }
     avg/=data.data.size();
     c[1]=avg;
     //cout << "guessing " << c[0] << " " << c[1] << " " << c[2] << " " << c[3] << endl;
