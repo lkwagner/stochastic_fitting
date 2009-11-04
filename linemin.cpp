@@ -60,7 +60,7 @@ void generate_line(double range, int npts, Potential_energy_surface & pes,
   assert(data.start_pos.size()==pes.ndim());
   int ndim=pes.ndim();
   vector <double> x(ndim);
-  double sigma=.01;
+  double sigma=.1;
   for(int i=0; i< npts; i++) { 
     double t=(i-npts/2)*range/npts;
     for(int d=0; d< ndim; d++) { 
