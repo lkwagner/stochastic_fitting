@@ -120,20 +120,24 @@ double rms_deviation(const Line_model & mod, const Line_data & data, const vecto
 //------------------------------------------------------------------
 
 bool sig_diff(Data_point & p1, Data_point & p2) { 
-  return fabs(p1.val-p2.val) > 2.0*sqrt(1.0/(p1.inverr*p1.inverr)+1.0/(p2.inverr*p2.inverr));
+  return fabs(p1.val-p2.val) > 3.0*sqrt(1.0/(p1.inverr*p1.inverr)+1.0/(p2.inverr*p2.inverr));
 }
 
 void find_minimum(double range, int maxpts, Data_generator & pes,
-                  Line_model & mod, Line_data & data, Fit_info & finfo) { 
+                  Line_model & mod, Line_data & data, Fit_info & finfo, 
+                  vector <double> & sigma) { 
   assert(data.start_pos.size()==data.direction.size());
   assert(data.start_pos.size()==pes.ndim());
   assert(data.data.size()==0);
+  assert(sigma.size()==data.direction.size());
+  int ndim=data.direction.size();
   
   static int call_num=0;
   string logname="find_minimum";
   append_number_fixed(logname, call_num);
   ofstream log(logname.c_str());
-  double start_sigma=1.1;
+  double start_sigma=0;;
+  for(int d=0; d< ndim; d++) start_sigma+=data.direction[d]*sigma[d];
   double start_t=-range;
   double end_t=range;
   Line_data tempdata=data;
@@ -146,33 +150,102 @@ void find_minimum(double range, int maxpts, Data_generator & pes,
   p3=gen_data(pes,data.direction,data.start_pos,end_t,start_sigma);
   vector <Data_point> allpts;
   allpts.push_back(p1); allpts.push_back(p2); allpts.push_back(p3);
+  log << "#starting sigma " << start_sigma << endl;
+  //First bracket the minimum.
   while(1) { 
+    log << "#step! points at  " << p1.t << " " << p2.t << " " << p3.t << endl;
     if(sig_diff(p1,p2) && sig_diff(p2,p3) && p2.val < p1.val && p2.val < p3.val) { 
       log << "#found set of bracketing points " << p1.t << " " << p2.t << " " << p3.t << endl;
       base_t=p2.t;
       break;
     }
-    else {  //expand our search range if we can't tell the difference
-      if(!sig_diff(p1,p2) || p1.val < p2.val) {
+    else if(!sig_diff(p1,p2) || !sig_diff(p2,p3)) { 
+      //First check to see if we're just on opposite sides of the minimum and recenter if so:
+      int shifted_minimum=0;
+      if(!sig_diff(p1,p2) && sig_diff(p2,p3)) { 
+        log << "#checking for minimum between " << p1.t << " and " << p2.t << endl;
+
+        p4=gen_data(pes,data.direction,data.start_pos,(p1.t+p2.t)/2.0,start_sigma);
+        allpts.push_back(p4);
+        if(sig_diff(p4,p1) && sig_diff(p4,p2)) {
+          start_t=p4.t-range;
+          end_t=p4.t+range;
+          p2=p4;
+          shifted_minimum=1;
+        }
+      }
+      else if(sig_diff(p1,p2) && !sig_diff(p2,p3)) { 
+        log << "#checking for minimum between " << p2.t << " and " << p3.t << endl;
+        p4=gen_data(pes,data.direction,data.start_pos,(p2.t+p3.t)/2.0,start_sigma);
+        allpts.push_back(p4);
+        if(sig_diff(p4,p3) && sig_diff(p4,p2)) {
+          start_t=p4.t-range;
+          end_t=p4.t+range;
+          p2=p4;
+          shifted_minimum=1;
+        }        
+      }
+      if(!shifted_minimum) { 
+        start_sigma*=0.5;
+        log << "#reducing sigma to " << start_sigma << " in bracketing routine \n";
+        p2=gen_data(pes,data.direction,data.start_pos,start_t+(end_t-start_t)/(1.0+golden),start_sigma);
+        allpts.push_back(p2);
+      }
+      p1=gen_data(pes,data.direction,data.start_pos,start_t,start_sigma);
+      allpts.push_back(p1);
+      p3=gen_data(pes,data.direction,data.start_pos,end_t,start_sigma);
+      allpts.push_back(p3);
+    }
+    else {  
+      if(p1.val < p2.val) {
         start_t-=range;
-        p1=gen_data(pes,data.direction,data.start_pos,start_t,start_sigma);
-        allpts.push_back(p1);
+        end_t-=range;
+        p4=gen_data(pes,data.direction,data.start_pos,start_t,start_sigma);
+        allpts.push_back(p4);
+        p3=p2;
+        p2=p1;
+        p1=p4;
       }
-      if(!sig_diff(p3,p2) || p3.val < p2.val) {
-        end_t+=range; 
-        p3=gen_data(pes,data.direction,data.start_pos,end_t,start_sigma);
-        allpts.push_back(p3);
+      if( p3.val < p2.val) {
+        end_t+=range;
+        start_t+=range;
+        p4=gen_data(pes,data.direction,data.start_pos,end_t,start_sigma);
+        allpts.push_back(p4);
+        p1=p2;
+        p2=p3;
+        p3=p4;
       }
-      p2=gen_data(pes,data.direction,data.start_pos,start_t+(end_t-start_t)/(1.0+golden),start_sigma);
-      allpts.push_back(p2);
-      log << "#expanding range to " << start_t << " to " << end_t << endl;
+      //p2=gen_data(pes,data.direction,data.start_pos,start_t+(end_t-start_t)/(1.0+golden),start_sigma);
+      //allpts.push_back(p2);
+      log << "#changing range to " << start_t << " to " << end_t << endl;
     }
   }
   
+  log << "#all points used in the bracketing " << endl;
+  for(vector<Data_point>::iterator d=allpts.begin(); d!= allpts.end(); d++) { 
+    log << d->t << " " << d->val << "  " << 1.0/d->inverr << endl;
+  }
+  log << endl;
+
+  log << "#minimum value point at t= " << p2.t << " val= " << p2.val << " +/- " << 1.0/p2.inverr << endl;
+  //Now include all points that are within 'range' of p2
+  /*
+  data.data.clear();
+  for(vector <Data_point>::iterator d=allpts.begin(); d!= allpts.end(); d++) { 
+    if(fabs(d->t-p2.t) < range+1.0e-6) data.data.push_back(*d);
+  }
+  if(data.data.size() < 3) { 
+    data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t+range,start_sigma));
+    data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t-range,start_sigma));
+  }
+   */
+  data.data.clear();
   data.data.push_back(p1); data.data.push_back(p2); data.data.push_back(p3);
+  data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t+0.6*range,start_sigma));
+  data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t-0.6*range,start_sigma));
+
   sample(mod, data, finfo);
   base_t=finfo.min[0];
-  data.data.clear();
   
   double rms=rms_deviation(mod, data,finfo.cavg);
   double avgerr=0;
@@ -183,7 +256,7 @@ void find_minimum(double range, int maxpts, Data_generator & pes,
   }
   avgerr/=npoints;
 
-  log << "#rms deviation " << rms <<  " average error " << avgerr << endl;
+  log << "#rms deviation " << rms <<  " average uncertainty " << avgerr << endl;
   
   //Check to see how many points are outside of 3 error bars..
   //It should actually happen occasionally, so we should be careful not to 
@@ -250,9 +323,11 @@ int main(int argc, char ** argv) {
   Quad_plus_line quad;
   vector <double> c;
   vector <double> currmin(n);
+  vector <double> sigma(n);
   for(int i=0; i< n; i++) { currmin[i]=10; } 
   vector < vector < double> > directions(n);
   for(int i=0; i < n; i++) directions[i].resize(n);
+  for(int i=0; i< n; i++) sigma[i]=100.1;
   for(int i=0; i< n; i++) 
     for(int j=0; j< n; j++) directions[i][j]= (i==j)?1.0:0.0;
   
@@ -266,7 +341,7 @@ int main(int argc, char ** argv) {
       tdata.direction.resize(n);
       tdata.start_pos=currmin;
       tdata.direction=directions[d];
-      find_minimum(1.0,10, *pes, *mod, tdata, finfo);
+      find_minimum(1.0,10, *pes, *mod, tdata, finfo,sigma);
       //generate_line(1.0,10,*pes,tdata);
       //sample(mod, tdata, finfo);
       for(int i=0; i< n; i++) { 
