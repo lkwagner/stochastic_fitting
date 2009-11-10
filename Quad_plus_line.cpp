@@ -293,16 +293,36 @@ void Quad_plus_line::get_minimum(const vector <double> & c, int ndim,
 
 void Quad_plus_line::get_hessian(const vector <double> & c, int ndim,
                                  vector <vector <double> > & H) { 
+  assert(c.size() >= 1+ndim+ndim*(ndim+1)/2);
   H.resize(ndim);
   int count=ndim+1;
   for(int i=0; i< ndim; i++) H[i].resize(ndim);
+
   for(int i=0; i<ndim; i++) { 
     for(int j=i; j< ndim; j++) { 
       H[i][j]=c[count++];
       H[j][i]=H[i][j];
     }
   }
+  
 }
+
+
+//-----------------------------------------------------------------------------
+
+bool Quad_plus_line::has_minimum(const vector <double> & c, int ndim) { 
+  assert(c.size() >= 1+ndim+ndim*(ndim+1)/2);
+  Array2 <double> H(ndim,ndim);
+  int count=ndim+1;  
+  for(int i=0; i<ndim; i++) { 
+    for(int j=i; j< ndim; j++) { 
+      H(i,j)=c[count++];
+      H(j,i)=H(i,j);
+    }
+  }
+  return is_posdef(ndim, H);
+}
+
 
 //-----------------------------------------------------------------------------
 
@@ -323,6 +343,14 @@ double Quad_plus_line::prob(const vector <Line_data> & data,
     i+=n;
     f+=models[line]->prob(data[line],fixes[line],ctmp );
   }
+  //cout << "prob " << f << endl;
+  //exit(0);
+  //if(isnan(f)) { 
+  //  cout << "probnan! ";
+   // for(vector<double>::const_iterator i=c.begin(); i!= c.end(); i++) 
+   //   cout << *i << " ";
+  // cout << endl;
+  //}
   return f;
 }
 
@@ -356,6 +384,12 @@ double Quad_plus_line::delta_prob(const vector <Line_data> & data,
     f+=models[line]->prob(data[line],fixes[line],ctmp );
   }
   
+  //if(isnan(f)) { 
+  //  cout << "deltanan! ";
+  //  for(vector<double>::const_iterator i=c.begin(); i!= c.end(); i++) 
+  //    cout << *i << " ";
+  //  cout << endl;
+  //}
   
   return f;
 }
@@ -394,4 +428,23 @@ void generate_posdef_matrix(int n, Array2 <double> & C) {
     //cout << endl;
   }
   while(!posdef) ;
+}
+//-----------------------------------------------------------------------------
+
+
+bool is_posdef(int n, Array2 <double> & C) { 
+  bool posdef=false;
+  Array2 <double> evecs(n,n); 
+  Array1 <double> evals(n);
+  EigenSystemSolverRealSymmetricMatrix(C,evals,evecs);
+  posdef=true;
+  for(int i=0; i< n; i++) { 
+    //cout << evals(i) << " ";
+    if(evals(i) <= 0) {
+      posdef=false;
+      break;
+    }
+  }
+  return posdef;
+  
 }

@@ -42,6 +42,7 @@ Data_point gen_data(Data_generator & pes, const vector <double> & direction,
   pt.t=t;
   pt.val=f;
   pt.inverr=1.0/err;
+  cout << "data: " << pt.t << " " << pt.val << " " << err << endl;
   return pt;
 }
 
@@ -118,9 +119,10 @@ double rms_deviation(const Line_model & mod, const Line_data & data, const vecto
 }
 
 //------------------------------------------------------------------
-
+//This returns true if the values are significantly different, fairly arbitrary, 
+//but it should be several sigmas.
 bool sig_diff(Data_point & p1, Data_point & p2) { 
-  return fabs(p1.val-p2.val) > 3.0*sqrt(1.0/(p1.inverr*p1.inverr)+1.0/(p2.inverr*p2.inverr));
+  return fabs(p1.val-p2.val) > 4.0*sqrt(1.0/(p1.inverr*p1.inverr)+1.0/(p2.inverr*p2.inverr));
 }
 
 void find_minimum(double range, int maxpts, Data_generator & pes,
@@ -136,8 +138,9 @@ void find_minimum(double range, int maxpts, Data_generator & pes,
   string logname="find_minimum";
   append_number_fixed(logname, call_num);
   ofstream log(logname.c_str());
+  log.precision(15);
   double start_sigma=0;;
-  for(int d=0; d< ndim; d++) start_sigma+=data.direction[d]*sigma[d];
+  for(int d=0; d< ndim; d++) start_sigma+=data.direction[d]*data.direction[d]*sigma[d];
   double start_t=-range;
   double end_t=range;
   Line_data tempdata=data;
@@ -215,8 +218,6 @@ void find_minimum(double range, int maxpts, Data_generator & pes,
         p2=p3;
         p3=p4;
       }
-      //p2=gen_data(pes,data.direction,data.start_pos,start_t+(end_t-start_t)/(1.0+golden),start_sigma);
-      //allpts.push_back(p2);
       log << "#changing range to " << start_t << " to " << end_t << endl;
     }
   }
@@ -228,21 +229,18 @@ void find_minimum(double range, int maxpts, Data_generator & pes,
   log << endl;
 
   log << "#minimum value point at t= " << p2.t << " val= " << p2.val << " +/- " << 1.0/p2.inverr << endl;
-  //Now include all points that are within 'range' of p2
-  /*
-  data.data.clear();
-  for(vector <Data_point>::iterator d=allpts.begin(); d!= allpts.end(); d++) { 
-    if(fabs(d->t-p2.t) < range+1.0e-6) data.data.push_back(*d);
-  }
-  if(data.data.size() < 3) { 
-    data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t+range,start_sigma));
-    data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t-range,start_sigma));
-  }
-   */
+  //Now that we've bracketed the minimum, we can fill in the data a little bit 
+  //for the fit.  Note that we may throw away a little data potentially, but 
+  //including it seems more trouble than it's worth and will slow down the Monte
+  //Carlo later.
   data.data.clear();
   data.data.push_back(p1); data.data.push_back(p2); data.data.push_back(p3);
   data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t+0.6*range,start_sigma));
   data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t-0.6*range,start_sigma));
+  data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t+0.8*range,start_sigma));
+  data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t-0.8*range,start_sigma));
+  data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t+0.3*range,start_sigma));
+  data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t-0.3*range,start_sigma));
 
   sample(mod, data, finfo);
   base_t=finfo.min[0];
@@ -301,13 +299,32 @@ int main(int argc, char ** argv) {
   string dummy;
   Data_generator * pes=NULL;
   Line_model * mod=NULL;
-  while(cin >> dummy) { 
-    if(dummy=="iterations") cin >> nit;
+  vector <double> currmin;
+  double trust_rad=0.4;
+  if(argc <=1 ) error("usage: linemin inputfile");
+  ifstream in(argv[1]);
+  
+  
+  while(in >> dummy) { 
+    if(dummy=="iterations") in >> nit;
     if(dummy=="random_quad") { 
-      int ndim; cin >> ndim;
+      int ndim; in >> ndim;
       pes=new Random_quadratic(ndim);
     }
-    if(dummy=="morse_mod") mod=new Morse_model;
+    if(dummy=="montecarlo_caller") { 
+      pes=new MonteCarlo_caller(in);
+    }
+    if(dummy=="morse_mod" && mod == NULL) mod=new Morse_model;
+    if(dummy=="cubic_mod" && mod == NULL) mod=new Cubic_model;
+    if(dummy=="trust_radius") in >> trust_rad;
+    if(dummy=="currmin") {
+      if(pes==NULL) error("PES not defined before minimum");
+      int ndim=pes->ndim();
+      double dum=0;
+      for(int i=0; i< ndim; i++) {
+        in >> dum; currmin.push_back(dum);
+      }
+    }
   }
   
   if(pes==NULL) pes=new Random_quadratic(2);
@@ -322,15 +339,14 @@ int main(int argc, char ** argv) {
   
   Quad_plus_line quad;
   vector <double> c;
-  vector <double> currmin(n);
+  //vector <double> currmin(n);
   vector <double> sigma(n);
-  for(int i=0; i< n; i++) { currmin[i]=10; } 
+  //for(int i=0; i< n; i++) { currmin[i]=10; } 
   vector < vector < double> > directions(n);
   for(int i=0; i < n; i++) directions[i].resize(n);
-  for(int i=0; i< n; i++) sigma[i]=100.1;
+  for(int i=0; i< n; i++) sigma[i]=0.01;
   for(int i=0; i< n; i++) 
     for(int j=0; j< n; j++) directions[i][j]= (i==j)?1.0:0.0;
-  
   
   cout << "begin " << endl;
   
@@ -341,7 +357,8 @@ int main(int argc, char ** argv) {
       tdata.direction.resize(n);
       tdata.start_pos=currmin;
       tdata.direction=directions[d];
-      find_minimum(1.0,10, *pes, *mod, tdata, finfo,sigma);
+      find_minimum(trust_rad,10, *pes, *mod, tdata, finfo,sigma);
+
       //generate_line(1.0,10,*pes,tdata);
       //sample(mod, tdata, finfo);
       for(int i=0; i< n; i++) { 
@@ -353,14 +370,17 @@ int main(int argc, char ** argv) {
       
       datas.push_back(tdata);
       models.push_back(mod);
+      //Add in extra parameters so our saved c doesn't freak.
+      //for(int i=0; i< mod->nparms(1); i++) c.push_back(1.0);
     }
     //
     int use_quad=1;
     if(use_quad) { 
       //optimize_quad(quad, datas,models,c);
-      
-      if(it==0) quad.generate_guess(datas, models, c);
+
+      quad.generate_guess(datas, models, c);
       sample(quad, datas, models, finfo, c);
+
       c=finfo.cavg;
       vector <double> quadmin(n);
       quad.get_minimum(c,n,quadmin);
@@ -376,7 +396,35 @@ int main(int argc, char ** argv) {
         cout << endl;
       }
       update_directions(hess,directions);
+
     }
+  }
+  
+  //Try removing the history to see what happens..
+  for(int it=0; it < nit; it++) { 
+    cout << "####################Removing the first " << it << " iterations " << endl;
+    for(int d=0; d< n; d++) {
+      datas.erase(datas.begin());
+      models.erase(models.begin());
+    }
+    quad.generate_guess(datas, models, c);
+    sample(quad, datas, models, finfo, c);
+    cout << "finished sample " << endl;
+    c=finfo.cavg;
+    vector <double> quadmin(n);
+    quad.get_minimum(c,n,quadmin);
+    vector < vector <double> > hess;
+    quad.get_hessian(c,n,hess);
+    
+    cout << "currmin_from_quad: ";
+    for(int i=0; i< n; i++) { cout << quadmin[i] << "  "; } 
+    cout << endl;
+    cout << "hessian: \n";
+    for(int i=0; i< n; i++) {
+      for(int j=0; j< n; j++) { cout << hess[i][j] << " "; }
+      cout << endl;
+    }
+    update_directions(hess,directions);
   }
   
   delete pes;

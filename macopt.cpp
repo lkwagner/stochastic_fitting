@@ -120,7 +120,14 @@ Macopt::Macopt(int n,
   a_linmin_g3 = 0.5 ; 
   a_restart = 0 ; 
 }
-Macopt::~Macopt() {}
+Macopt::~Macopt() {
+  delete [] a_g;
+  delete [] a_h;
+  delete [] a_xi;
+  delete [] a_pt;
+  delete [] a_gx;
+  delete [] a_gy;
+}
 
 void Macopt::macoptII
   (double *p,            /* starting vector                                */

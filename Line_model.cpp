@@ -16,8 +16,6 @@ const double Line_model::prob(const Line_data & data ,const Fix_information & fi
   }
   
   double f=0;
-  assert(data.t.size()==data.val.size());
-  assert(data.t.size()==data.err.size());
   double fp, t1;
   for(vector <Data_point>::const_iterator i=data.data.begin(); 
       i!=data.data.end(); i++) {
@@ -25,16 +23,11 @@ const double Line_model::prob(const Line_data & data ,const Fix_information & fi
     t1=i->val-fp;
     f-=t1*t1*0.5*(i->inverr)*(i->inverr);
   }
-  /*
-  for(cdit_t t=data.t.begin(), v=data.val.begin(), e=data.err.begin(); 
-      t != data.t.end(); t++,v++,e++) { 
-    double fp=func(realc,*t);
-    f-=(*v-fp)*(*v-fp)/(2*(*e)*(*e));
-  }
-   */
+
   return f;
 }
 
+//###############################################################################
 
 //------------------------------------------------------------------------------
 
@@ -51,6 +44,8 @@ const double Morse_model::func(const vector <double> & c, double t) const {
   double tmp=1-exp(-c[2]*(t-c[3]));
   return c[0]+c[1]*tmp*tmp;
 }
+
+
 //------------------------------------------------------------------------------
 
 const void Morse_model::generate_guess(const Line_data & data, const Fix_information & fix,
@@ -63,8 +58,8 @@ const void Morse_model::generate_guess(const Line_data & data, const Fix_informa
     c.resize(4);
     c[0]=data.data[0].val;
     
-    c[1]=10.0*(rng.ulec()-0.5);
-    c[2]=10.0*(rng.ulec()-0.5);
+    c[1]=1.0*(rng.ulec()-0.5);
+    c[2]=1.0*(rng.ulec()-0.5);
     double avg=0;
     
     for(vector<Data_point>::const_iterator t=data.data.begin(); t!= data.data.end(); t++) {
@@ -91,6 +86,66 @@ const void Morse_model::convert_c(const Fix_information & fix, const vector <dou
   c_out[0]=fix.valmin;
   c_out[3]=fix.min;
 }
+//###############################################################################
+
+//------------------------------------------------------------------------------
+
+const void Cubic_model::minimum(const vector <double> & c, vector <double> & min) { 
+  assert(c.size() >=4);
+  min.resize(1);
+  min[0]=c[1];
+}
+
+//------------------------------------------------------------------------------
+
+const double Cubic_model::func(const vector <double> & c, double t) const { 
+  assert(c.size() >=4 );
+  return c[0]+c[2]*(t-c[1])*(t-c[1])+c[3]*(t-c[1])*(t-c[1])*(t-c[1]);
+}
+
+
+//------------------------------------------------------------------------------
+
+const void Cubic_model::generate_guess(const Line_data & data, const Fix_information & fix,
+                                       vector <double> & c) { 
+  if(fix.enforce==1) { 
+    c.resize(1);
+    c[0]=1.0*(rng.ulec()-0.5);
+  }
+  else { 
+    c.resize(4);
+    //c[0]=data.data[0].val;
+    
+    c[2]=1.0*(rng.ulec()-0.5);
+    c[3]=1.0*(rng.ulec()-0.5);
+    double avg=0;
+    
+    for(vector<Data_point>::const_iterator t=data.data.begin(); t!= data.data.end(); t++) {
+      avg+=t->t;
+      if(c[0] < t->val) c[0]=t->val;
+    }
+    avg/=data.data.size();
+    c[1]=avg;
+    //cout << "guessing " << c[0] << " " << c[1] << " " << c[2] << " " << c[3] << endl;
+    
+  }
+  
+  
+}
+
+//------------------------------------------------------------------------------
+
+const void Cubic_model::convert_c(const Fix_information & fix, const vector <double> & c_in, 
+                                  vector <double> & c_out) { 
+  assert(c_in.size() >=1);
+  c_out.resize(4);
+  c_out[3]=c_in[0];
+  c_out[2]=fix.curve*0.5;
+  c_out[0]=fix.valmin;
+  c_out[1]=fix.min;
+}
+
+
 //###############################################################################
 
 const void Quadratic_model::minimum(const vector <double> & c, vector <double> & min) { 
@@ -137,7 +192,7 @@ const void Quadratic_model::generate_guess(const Line_data & data, const Fix_inf
 const void Quadratic_model::convert_c(const Fix_information & fix, const vector <double> & c_in, 
                                   vector <double> & c_out) { 
   assert(c_in.size() >=0);
-  c_out.resize(4);
+  c_out.resize(3);
   c_out[2]=0.5*fix.curve;
   c_out[0]=fix.valmin;
   c_out[1]=fix.min;

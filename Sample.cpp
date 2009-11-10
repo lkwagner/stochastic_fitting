@@ -45,7 +45,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
   
   double best_p=-1e99;
   
-  int nit=1000;
+  int nit=10000;
   int nparms=c.size();
   
   
@@ -63,7 +63,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
     if(p > best_p ) { 
       best_c=opt.c;
       best_p=p;
-      if(0) { 
+      if(1) { 
         cout << "\n new best ";
         for(dit_t i=opt.c.begin(); i!= opt.c.end(); i++) cout << *i << " ";
         cout << p << endl;
@@ -71,6 +71,33 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
     }
   }
   c=best_c;
+  
+  
+  double sig=0.2;
+  cout << "shaking with a Gaussian " << endl;
+  for(int i=0; i< nit; i++) { 
+    for(int j=0; j< best_c.size(); j++) c[j]=best_c[j]*(1+sig*rng.gasdev());
+    Least_squares_opt opt(nparms,0,.1,50,1);
+    mod.generate_guess(data,fix,opt.c);
+    opt.mod=&mod;    
+    opt.fix=&fix;
+    opt.data=&data;
+    opt.optimize();
+    double p=mod.prob(data, fix,opt.c);    
+    cout.flush();
+    //cout << "prob " << p << endl;
+    if(p > best_p || isnan(best_p) ) { 
+      best_c=opt.c;
+      best_p=p;
+      if(1) { 
+        cout << " it " << i << " ";
+        for(dit_t i=opt.c.begin(); i!= opt.c.end(); i++) cout << *i << " ";
+        cout << p  << endl;
+      }
+    }
+  }
+  c=best_c;
+  
 }
 
 void sample(Line_model & mod, const Line_data & data, Fit_info & finfo,
@@ -199,8 +226,9 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
   double best_p=quad.prob(data,models, c,fixes);
   cout << "initial probability " << best_p << endl;
   //int nit=1000;
-  int nit=500;
+  int nit=1000;
   int nparms=c.size();
+  int ndim=data[0].direction.size();
   
   for(int i=0; i< nit; i++) { 
     quad.generate_guess(data,models,c);
@@ -208,7 +236,7 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
     double p=quad.prob(data, models, c,fixes);
     cout.flush();
     //cout << "prob " << p << endl;
-    if(p > best_p  ) { 
+    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
       best_c=c;
       best_p=p;
       if(1) { 
@@ -219,6 +247,29 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
     }
   }
   c=best_c;
+  
+  //Also try shaking the best-so-far parameters by a gaussian
+  //
+  double sig=0.2;
+  cout << "shaking with a Gaussian " << endl;
+  for(int i=0; i< nit; i++) { 
+    for(int j=0; j< best_c.size(); j++) c[j]=best_c[j]*(1+sig*rng.gasdev());
+    optimize_quad(quad, data, models,fixes,c);
+    double p=quad.prob(data, models, c,fixes);
+    cout.flush();
+    //cout << "prob " << p << endl;
+    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
+      best_c=c;
+      best_p=p;
+      if(1) { 
+        cout << " it " << i << " ";
+        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
+        cout << p  << endl;
+      }
+    }
+  }
+  c=best_c;
+  
   
 }
 
@@ -390,14 +441,19 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
   Walker walker;
   quad.generate_guess(data, models, walker.c);
   assert(startc.size()==walker.c.size());
+  if(startc.size() < walker.c.size()) { 
+    int orig=startc.size();
+    startc.resize(walker.c.size());
+    for(int i=orig; i < walker.c.size(); i++) 
+      startc[i]=walker.c[i];
+  }
+  
   walker.c=startc;
   shake_quad(quad,data, models, fixes, walker.c);
   walker.prob=quad.prob(data, models, walker.c,fixes);
   //exit(0);
-  
   for(vector <Walker>::iterator i=configs.begin(); i!= configs.end(); i++)
     *i=walker;
-  
   //int nstep=10000;
   int nstep=  100;
   int decorr=100;
@@ -419,7 +475,7 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
   for(dit_t i=finfo.min.begin(); i!= finfo.min.end(); i++) *i=0.0;
   for(dit_t i=finfo.minerr.begin(); i!= finfo.minerr.end(); i++) *i=0.0;
   vector <Walker> allwalkers;
-  
+
   for(int step=0; step < nstep; step++) { 
     for(vector<Walker>::iterator w=configs.begin(); w!=configs.end(); w++) {
       //update the fixes for this walker.
@@ -429,21 +485,24 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
           if(metropolis_step(quad, data, models, fixes, tstep, *w, p)) acc++;
         }
       }
-    
       if(step > warmup) { 
+        
         for(int p=0; p < nparms; p++) { 
           double oldavg=avgs[p];
           double oldvar=vars[p];
+          //cout << p; cout.flush();
           avgs[p]=oldavg+(w->c[p]-oldavg)/(navgpts+1);
           if(navgpts >0) { 
             vars[p]=(1-1.0/navgpts)*oldvar+(navgpts+1)*(avgs[p]-oldavg)*(avgs[p]-oldavg);
           }
+        
         }
         allwalkers.push_back(*w);
         navgpts++;
       }
     }
   }
+  
   
   for(int p=0; p < nparms; p++) 
     vars[p]=sqrt(vars[p]);

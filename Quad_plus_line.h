@@ -9,6 +9,7 @@ using namespace std;
 
 class Quad_plus_line { 
 public:
+  
   void generate_guess(const vector <Line_data> & data, const vector <Line_model *> & models,
                       vector <double> & c);
   double prob(const vector <Line_data> & data, const vector <Line_model * > & models,
@@ -28,10 +29,12 @@ public:
   void get_minimum(const vector <double> & c, int ndim, 
                    vector < double>  & m);
     
+  bool has_minimum(const vector <double> & c, int ndim);
   
 };
 
 #include "Array.h"
+bool is_posdef(int n, Array2 <double> & C); 
 
 void generate_posdef_matrix(int n, Array2 <double> & );
 

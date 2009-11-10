@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <fstream>
+#include "ulec.h"
+#include <string>
 
 using namespace std; 
 
@@ -33,7 +35,7 @@ private:
 };
 
 //------------------------------------------------------------------
-/*
+
 class MonteCarlo_caller:public Data_generator { 
 public:
   virtual void eval(const vector <double> & x, const double desired_err, 
@@ -42,8 +44,13 @@ public:
   MonteCarlo_caller(istream & is);
 private:
   int n;
+  double estimated_rms;
+  int min_blocks;
+  string command; //command should take an argument that controls the number of blocks
+                  //x will be written to mc_input in space-delimited format
+                  //expects an output in mc_output of the function value and its error bar
 };
- */
+ 
 
 //------------------------------------------------------------------
 
