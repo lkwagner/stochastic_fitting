@@ -36,13 +36,20 @@ public:
   virtual const void generate_guess(const Line_data &,const Fix_information &, vector <double> & c)=0;
   virtual const double prob(const Line_data & ,const Fix_information &, const vector <double> & c);
   virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
-                          vector <double> & c_out) { error("fix not implemented\n"); } 
+                          vector <double> & c_out) { error("fix not implemented\n"); }
+  //convert c from nonfixed to fixed c
+  virtual const void downconvert_c(const Fix_information &, 
+                                   const vector <double> & c_in, vector <double> & c_out){
+    error("downconversion not supported for this Line_model");
+  }
   virtual const int nparms(int fix)=0;
   //Note the c here is the full one, ie, without any fix. Use convert_c if you want 
   //to use this with fixes, same applies to the minimum..which you should know anyway
   //if you fix it!
   virtual const double func(const vector <double> & c, double t) const = 0;
   virtual const void minimum(const vector <double> & c, vector <double> & min)=0;
+  //return the curvature at the minum;
+  virtual double curve(const vector <double> & c) { error("Curvature not supported for this Line_model"); }
   
 };
 
@@ -66,7 +73,11 @@ public:
   virtual const double  func(const vector <double> & c,double t) const ;
   virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
                                vector <double> & c_out);
-  
+  virtual double curve(const vector <double> & c);
+  virtual const void downconvert_c(const Fix_information &, 
+                                   const vector <double> & c_in, vector <double> & c_out);
+
+
 };
 
 

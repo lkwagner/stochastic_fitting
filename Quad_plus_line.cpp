@@ -1,12 +1,84 @@
 #include "Quad_plus_line.h"
 #include "ulec.h"
-
+#include "Sample.h"
+#include "macopt.h"
 //The format of c will be:
 // E_0 , vector of minima, then the unique values of Hessian in the following order
 // for(i=0; i< n; i++)  for(j=i; j< n; j++) H(i,j)
 // Then followed by the extra variables for the line models in order, so it's 
 // important to keep the order of the models and data the same between calls.
 // Near the minimum, E is approximated as E_0 + (x-m)^T H (x-m)
+
+
+
+class Minimize_curve_err:public Macopt { 
+public:
+  Minimize_curve_err(int _n,int _verbose, double _tol,
+                    int _itmax,int _rich):Macopt(_n,_verbose,_tol,_itmax,_rich) {
+  } 
+  double func(double * _p) { 
+    
+    double f=0;
+    Array2 <double> H(ndim, ndim);
+    int count=1;
+    for(int i=0;i< ndim; i++) {
+      for(int j=i; j< ndim; j++)  { 
+        H(i,j)=_p[count++];
+        H(j,i)=H(i,j);
+      }
+    }
+    int line=0;
+    for(vector<Line_data>::iterator d=data.begin(); d!=data.end(); d++) { 
+      double vHv=0;
+      for(int i=0; i< ndim; i++) { 
+        for(int j=0; j< ndim; j++) { 
+          vHv+=d->direction[i]*H(i,j)*d->direction[j];
+        }
+      }
+      f+=fabs(vHv-0.5*curve[line++]);
+    }
+    return f;
+  }  
+  
+  double dfunc(double * _p, double * _g) {
+    int m=a_n;
+    double base=func(_p);
+    double step=1e-8;
+    for(int i=1; i<= m; i++) {
+      _p[i]+=step;
+      double nwfunc=func(_p);
+      _p[i]-=step;
+      _g[i]=(nwfunc-base)/step;
+    }
+    _g[0]=base;
+    return base;
+  }
+  void iteration_print(double f, double gg, double tol,  int itn) {
+    //cout <<"macopt: ";
+    //for(int i=0; i< c.size(); i++) cout << c[i] << " ";
+    //cout <<  endl;
+  }
+  
+  void optimize(vector<double> & c) { 
+    int n=(ndim+1)*ndim/2;
+    double p[n+1];
+    for(int i=1; i<=n; i++) p[i]=10*(rng.ulec()-0.5);
+    //maccheckgrad(p,c.size(),.0001, c.size());
+    macoptII(p,n);
+    c.resize(n);
+    for(int i=0; i < n; i++) {
+      c[i]=p[i+1];
+    }
+  }
+
+  vector <Line_data> data;
+  vector <double>  curve; 
+  int ndim;
+  
+};
+
+//----------------------------------------------------------------------------
+
 void Quad_plus_line::generate_guess(const vector <Line_data> & data, 
                                     const vector <Line_model * > & models,
                                     vector <double> & c) {
@@ -46,6 +118,29 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
     //cout << min_en_pos[i] << " ";
   }
   //cout << endl;
+  
+  vector <Fit_info> finfo(nlines);
+  vector <vector <double> > guesses;
+  vector <double> curves;
+  for(int i=0; i< nlines; i++) { 
+    Fix_information falsefix;
+    vector <double> c_tmp;
+    models[i]->generate_guess(data[i],falsefix,c_tmp);
+    find_good_guess(*models[i],data[i],falsefix,c_tmp);
+    guesses.push_back(c_tmp);
+    curves.push_back(models[i]->curve(c_tmp));
+  }
+  
+  
+  Minimize_curve_err  min((ndim+1)*ndim/2,1,0.01,100,1);
+  min.data=data;
+  min.ndim=ndim;
+  min.curve=curves;
+  vector <double> hess;
+  min.optimize(hess);
+  for(int i=0; i< (ndim+1)*ndim/2; i++) c[count++]=hess[i];
+  
+  /*
   Array2 <double> H(ndim, ndim);
   generate_posdef_matrix(ndim,H);
   assert(count==ndim+1);
@@ -54,13 +149,15 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
       c[count++]=H(i,j);
     }
   }
+   */
 
   set_fixes(data, c, fixes);
   for(int i=0; i< nlines; i++) { 
     vector <double> c_tmp;
-    models[i]->generate_guess(data[i],fixes[i],c_tmp);
+    models[i]->downconvert_c(fixes[i],guesses[i],c_tmp);
     c.insert(c.end(),c_tmp.begin(), c_tmp.end());
   }
+   
   
 }
 
@@ -411,7 +508,7 @@ void generate_posdef_matrix(int n, Array2 <double> & C) {
         A(i,j)=2.0*(rng.ulec()-0.5);
         A(j,i)=0.0;
       }
-      A(i,i)=5.0*rng.ulec()+0.5;
+      A(i,i)=1.0*rng.ulec()+0.5;
     }
     B=A;
     TransposeMatrix(B,n);

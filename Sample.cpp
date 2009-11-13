@@ -63,7 +63,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
     if(p > best_p ) { 
       best_c=opt.c;
       best_p=p;
-      if(1) { 
+      if(0) { 
         cout << "\n new best ";
         for(dit_t i=opt.c.begin(); i!= opt.c.end(); i++) cout << *i << " ";
         cout << p << endl;
@@ -72,7 +72,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
   }
   c=best_c;
   
-  
+  /*
   double sig=0.2;
   cout << "shaking with a Gaussian " << endl;
   for(int i=0; i< nit; i++) { 
@@ -96,6 +96,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
       }
     }
   }
+   */
   c=best_c;
   
 }
@@ -222,13 +223,38 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
                          vector <double> & c) { 
   quad.generate_guess(data,models, c);
   vector <double> best_c=c;
+  double sig=0.6;
+
   optimize_quad(quad, data, models, fixes, c);
   double best_p=quad.prob(data,models, c,fixes);
-  cout << "initial probability " << best_p << endl;
+  cout << "initial probability ";
+  for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
+  cout << best_p  << endl;
+  
   //int nit=1000;
   int nit=1000;
   int nparms=c.size();
   int ndim=data[0].direction.size();
+  cout << "allvars " << endl;
+  
+  for(int i=0; i< 2*nit; i++) { 
+    for(int j=0; j< best_c.size(); j++) c[j]=best_c[j]*(1+sig*rng.gasdev());
+    optimize_quad(quad, data, models,fixes,c);
+    double p=quad.prob(data, models, c,fixes);
+    cout.flush();
+    //cout << "prob " << p << endl;
+    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
+      best_c=c;
+      best_p=p;
+      if(1) { 
+        cout << " it " << i << " ";
+        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
+        cout << p  << endl;
+      }
+    }
+  }
+/*
+  cout << "Random casting " << endl;
   
   for(int i=0; i< nit; i++) { 
     quad.generate_guess(data,models,c);
@@ -250,9 +276,10 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
   
   //Also try shaking the best-so-far parameters by a gaussian
   //
-  double sig=0.2;
-  cout << "shaking with a Gaussian " << endl;
-  for(int i=0; i< nit; i++) { 
+  
+  cout << "allvars " << endl;
+  
+  for(int i=0; i< 2*nit; i++) { 
     for(int j=0; j< best_c.size(); j++) c[j]=best_c[j]*(1+sig*rng.gasdev());
     optimize_quad(quad, data, models,fixes,c);
     double p=quad.prob(data, models, c,fixes);
@@ -267,7 +294,47 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
         cout << p  << endl;
       }
     }
+  }*/
+  
+  cout << "individual shake " << endl;
+  for(int i=0; i< 2*nit; i++) { 
+    //for(int j=0; j< best_c.size(); j++);
+    int j=int(best_c.size()*rng.ulec());
+    c[j]=best_c[j]*(1+sig*rng.gasdev());
+    optimize_quad(quad, data, models,fixes,c);
+    double p=quad.prob(data, models, c,fixes);
+    cout.flush();
+    //cout << "prob " << p << endl;
+    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
+      best_c=c;
+      best_p=p;
+      if(1) { 
+        cout << " it " << i << " ";
+        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
+        cout << p  << endl;
+      }
+    }
   }
+  /*
+  cout << "minima " << endl;
+  //shake the minima particularly..
+  for(int i=0; i< 2*nit; i++) { 
+    for(int j=0; j< ndim+1; j++) c[j]=best_c[j]*(1+sig*rng.gasdev());
+    optimize_quad(quad, data, models,fixes,c);
+    double p=quad.prob(data, models, c,fixes);
+    cout.flush();
+    //cout << "prob " << p << endl;
+    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
+      best_c=c;
+      best_p=p;
+      if(1) { 
+        cout << " it " << i << " ";
+        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
+        cout << p  << endl;
+      }
+    }
+  }*/
+  
   c=best_c;
   
   
@@ -440,7 +507,7 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
   
   Walker walker;
   quad.generate_guess(data, models, walker.c);
-  assert(startc.size()==walker.c.size());
+  //assert(startc.size()==walker.c.size());
   if(startc.size() < walker.c.size()) { 
     int orig=startc.size();
     startc.resize(walker.c.size());

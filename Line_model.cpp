@@ -145,6 +145,21 @@ const void Cubic_model::convert_c(const Fix_information & fix, const vector <dou
   c_out[1]=fix.min;
 }
 
+//------------------------------------------------------------------------------
+
+
+double Cubic_model::curve(const vector <double> & c) { 
+  assert(c.size() >=4);
+  return c[2]*2.0;
+}
+
+const void Cubic_model::downconvert_c(const Fix_information & fix, 
+                         const vector <double> & c_in, vector <double> & c_out){
+  c_out.resize(1);
+  assert(c_in.size() >= 4);
+  c_out[0]=c_in[3];
+}
+
 
 //###############################################################################
 

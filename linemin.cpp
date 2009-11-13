@@ -303,7 +303,7 @@ int main(int argc, char ** argv) {
   double trust_rad=0.4;
   if(argc <=1 ) error("usage: linemin inputfile");
   ifstream in(argv[1]);
-  
+  int nsweeps_keep=2;
   
   while(in >> dummy) { 
     if(dummy=="iterations") in >> nit;
@@ -325,6 +325,7 @@ int main(int argc, char ** argv) {
         in >> dum; currmin.push_back(dum);
       }
     }
+    if(dummy=="nsweeps_keep") { in >> nsweeps_keep; } 
   }
   
   if(pes==NULL) pes=new Random_quadratic(2);
@@ -333,9 +334,6 @@ int main(int argc, char ** argv) {
   
   Fit_info finfo;
 
-  vector <Line_model *> models;
-
-  vector <Line_data> datas;
   
   Quad_plus_line quad;
   vector <double> c;
@@ -349,8 +347,12 @@ int main(int argc, char ** argv) {
     for(int j=0; j< n; j++) directions[i][j]= (i==j)?1.0:0.0;
   
   cout << "begin " << endl;
+  vector <Line_model *> models;
+  
+  vector <Line_data> datas;
   
   for(int it=0; it < nit; it++) { 
+    
     for(int d=0; d< n; d++) { 
       Line_data tdata;
       tdata.start_pos.resize(n);
@@ -370,15 +372,17 @@ int main(int argc, char ** argv) {
       
       datas.push_back(tdata);
       models.push_back(mod);
-      //Add in extra parameters so our saved c doesn't freak.
-      //for(int i=0; i< mod->nparms(1); i++) c.push_back(1.0);
+      if(it >= nsweeps_keep) {
+        datas.erase(datas.begin());
+        models.erase(models.begin());
+      }
     }
     //
     int use_quad=1;
     if(use_quad) { 
       //optimize_quad(quad, datas,models,c);
 
-      quad.generate_guess(datas, models, c);
+      if(it==0) quad.generate_guess(datas, models, c);
       sample(quad, datas, models, finfo, c);
 
       c=finfo.cavg;
@@ -401,6 +405,7 @@ int main(int argc, char ** argv) {
   }
   
   //Try removing the history to see what happens..
+  /*
   for(int it=0; it < nit; it++) { 
     cout << "####################Removing the first " << it << " iterations " << endl;
     for(int d=0; d< n; d++) {
@@ -426,7 +431,7 @@ int main(int argc, char ** argv) {
     }
     update_directions(hess,directions);
   }
-  
+  */
   delete pes;
   delete mod;
 }
