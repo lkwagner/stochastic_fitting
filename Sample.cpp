@@ -22,12 +22,6 @@ void Fit_info::print(ostream & os) {
 
 
 typedef vector<double>::iterator dit_t;
-
-struct Walker { 
-  vector <double> c;
-  double prob;
-};
-
 double gradient(Line_model & mod, const Line_data & data, const Fix_information & fix,
     const vector <double> & c, int d) { 
   double prob=mod.prob(data, fix, c);
@@ -60,7 +54,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
     double p=mod.prob(data, fix,opt.c);
     cout.flush();
 //cout << "prob " << p << endl;
-    if(p > best_p ) { 
+    if(p > best_p  && mod.curve(opt.c) > 0) { 
       best_c=opt.c;
       best_p=p;
       if(0) { 
@@ -497,7 +491,7 @@ void check_quad_model(Quad_plus_line & quad,vector <Line_data> &  data,
 //------------------------------------------------------------------------------
 
 void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models, 
-            Fit_info & finfo, vector<double> & startc, int verbose) { 
+            Fit_info & finfo, vector<double> & startc, vector <Walker> & allwalkers, int verbose) { 
   int nconfig=100;
   vector <Walker> configs(nconfig);
   vector <Fix_information> fixes;
@@ -541,7 +535,7 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
   finfo.minerr.resize(min.size());
   for(dit_t i=finfo.min.begin(); i!= finfo.min.end(); i++) *i=0.0;
   for(dit_t i=finfo.minerr.begin(); i!= finfo.minerr.end(); i++) *i=0.0;
-  vector <Walker> allwalkers;
+  //vector <Walker> allwalkers;
 
   for(int step=0; step < nstep; step++) { 
     for(vector<Walker>::iterator w=configs.begin(); w!=configs.end(); w++) {
@@ -586,7 +580,7 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
   
   finfo.cavg=avgs;
   finfo.cer=vars;
-  write_paths(allwalkers);
+  //write_paths(allwalkers);
   
 }
 

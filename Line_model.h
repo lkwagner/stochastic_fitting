@@ -18,6 +18,8 @@ public:
   vector <double> direction; //the direction in which we searched (n-fold)
   vector <double> start_pos; 
   vector <Data_point> data;
+  void store(ostream & os);
+  void read(istream & is); 
 };
 
 struct Fix_information { 
@@ -89,6 +91,10 @@ public:
   virtual const double  func(const vector <double> & c,double t) const;
   virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
                                vector <double> & c_out);
+
+  virtual double curve(const vector <double> & c);
+  virtual const void downconvert_c(const Fix_information &, 
+                                   const vector <double> & c_in, vector <double> & c_out);
   
 };
 

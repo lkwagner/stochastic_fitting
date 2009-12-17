@@ -2,8 +2,29 @@
 #include "ulec.h"
 
 typedef vector<double>::const_iterator cdit_t;
+//###############################################################################
 
+void Line_data::store(ostream & os) { 
+  int ndim=direction.size();
+  assert(start_pos.size()==ndim);
+  int ndata=data.size();
+  os << "ndim " << ndim << " ndata " << ndata << endl;
+  os << "direction ";
+  for(cdit_t i=direction.begin(); i!=direction.end(); i++) os << *i << " ";
+  os << endl;
+  os << "start_pos ";
+  for(cdit_t i=start_pos.begin(); i!= start_pos.end(); i++) os << *i << " ";
+  os << endl;
+  for(vector <Data_point>::iterator i=data.begin(); i!=data.end(); i++) { 
+    os << "data " << i->t << " " << i->val << " " << i->inverr << endl;
+  }
+}
 
+void Line_data::read(istream & is) { 
+  
+}
+
+//###############################################################################
 
 const double Line_model::prob(const Line_data & data ,const Fix_information & fix, 
                         const vector <double> & c) { 
@@ -212,4 +233,18 @@ const void Quadratic_model::convert_c(const Fix_information & fix, const vector 
   c_out[0]=fix.valmin;
   c_out[1]=fix.min;
 }
+//------------------------------------------------------------------------------
 
+double Quadratic_model::curve(const vector <double> & c) { 
+  assert(c.size() >=3);
+  return c[2]*2.0;
+}
+//------------------------------------------------------------------------------
+
+const void Quadratic_model::downconvert_c(const Fix_information & fix, 
+                                      const vector <double> & c_in, vector <double> & c_out){
+  c_out.resize(0);
+  assert(c_in.size() >= 3);
+}
+
+//------------------------------------------------------------------------------

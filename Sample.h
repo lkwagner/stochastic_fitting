@@ -14,6 +14,13 @@ struct Fit_info {
 };
 
 
+struct Walker { 
+  vector <double> c;
+  double prob;
+};
+
+
+
 void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information & fix,
                      vector <double> & c); 
 
@@ -27,6 +34,6 @@ void optimize_quad(Quad_plus_line & quad, vector <Line_data> & data, vector <Lin
 
 //startc can be a reasonable guess from a previous fit
 void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models, 
-            Fit_info & finfo, vector <double> & startc, int verbose=1);
+            Fit_info & finfo, vector <double> & startc, vector <Walker> & allwalkers, int verbose=1);
 
 #endif //SAMPLE_H_INCLUDED

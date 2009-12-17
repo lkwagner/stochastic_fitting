@@ -65,6 +65,7 @@ void generate_line(double range, int npts, Data_generator & pes,
 //------------------------------------------------------------------
 
 void update_directions(vector < vector < double> > & hess, 
+                       vector <double> & evals_return,
                        vector < vector <double> > & directions) { 
   int n=hess.size();
   assert(hess[0].size()==n);
@@ -81,21 +82,86 @@ void update_directions(vector < vector < double> > & hess,
     }
   }
   EigenSystemSolverRealSymmetricMatrix(H,evals, Ev);
-
-  cout << "eigenvalues: ";
-  for(int i=0; i< n; i++) cout << evals(i) << " ";
-  cout << endl;
-  
-  cout << "New directions : " << endl;
+  evals_return.resize(n);
+  for(int i=0; i< n;i++) evals_return[i]=evals[i];
   for(int i=0; i< n; i++) { 
     for(int j=0; j< n; j++) { 
       directions[i][j]=Ev(j,i); 
-      cout << Ev(i,j) << " ";
     }
-    cout << endl;
   }
+  
 
 }
+
+//------------------------------------------------------------------
+
+
+void average_directions(Quad_plus_line & quad,vector <Walker> &  allwalkers,
+                        vector <double> & evals,vector <vector <double> > & directions) { 
+  int n=directions.size();
+  assert(directions.size()==directions[0].size());
+
+  vector < vector <double> > hess;
+  vector <double> tevals(n);
+  vector <double> posevals(n);
+  vector < vector <double> > tdirections(n);
+  vector <vector <double> > posdirections(n);
+  for(vector< vector <double> >::iterator i=tdirections.begin(); 
+      i!= tdirections.end(); i++) i->resize(n);
+  for(vector< vector <double> >::iterator i=posdirections.begin(); 
+      i!= posdirections.end(); i++) i->resize(n);
+  
+  int nwalkers=allwalkers.size();
+  for(int i=0; i< n; i++) { 
+    evals[i]=0;
+    posevals[i]=0;
+    for(int j=0; j< n; j++) { 
+      directions[i][j]=0;
+      posdirections[i][j]=0;
+    }
+  }
+  
+  int npos=0;
+  
+  for(vector<Walker>::iterator w=allwalkers.begin(); w!=allwalkers.end(); w++) {
+    quad.get_hessian(w->c,n,hess);
+    update_directions(hess,tevals, tdirections);
+    cout << "eval ";
+    for(int i=0; i< n; i++) { 
+      evals[i]+=tevals[i]/nwalkers;
+      cout << tevals[i] << " ";
+      for(int j=0; j< n; j++) { 
+        directions[i][j]+=tdirections[i][j]/nwalkers;
+      }
+    }
+    cout << endl;
+    if(tevals[n-1]> 0) { //our eigenvector routine sorts the eigenvalues
+      npos++;
+      for(int i=0; i< n; i++) { 
+        posevals[i]+=tevals[i];
+        for(int j=0; j< n; j++) { 
+          posdirections[i][j]+=tdirections[i][j];
+        }
+      }
+    }
+  }
+  
+    
+  
+  if(npos >0) { 
+    cout << "Found positive definite matrices! " << endl;
+     for(int i=0; i< n; i++) { 
+       posevals[i]/=npos;
+       for(int j=0; j< n; j++) { 
+         posdirections[i][j]/=npos;
+       }
+     }
+    evals=posevals;
+    directions=posdirections;
+  }
+  
+}
+
 
 //------------------------------------------------------------------
 inline void append_number_fixed(string & str, int num){
@@ -303,8 +369,9 @@ int main(int argc, char ** argv) {
   double trust_rad=0.4;
   if(argc <=1 ) error("usage: linemin inputfile");
   ifstream in(argv[1]);
-  int nsweeps_keep=2;
-  
+  int nsweeps_keep=0;
+  int use_quad=1;
+
   while(in >> dummy) { 
     if(dummy=="iterations") in >> nit;
     if(dummy=="random_quad") { 
@@ -314,9 +381,13 @@ int main(int argc, char ** argv) {
     if(dummy=="montecarlo_caller") { 
       pes=new MonteCarlo_caller(in);
     }
+    if(dummy=="random_cubic") { 
+      pes=new Random_cubic(in);
+    }
     if(dummy=="morse_mod" && mod == NULL) mod=new Morse_model;
     if(dummy=="cubic_mod" && mod == NULL) mod=new Cubic_model;
     if(dummy=="trust_radius") in >> trust_rad;
+    if(dummy=="no_hessian") use_quad=0;
     if(dummy=="currmin") {
       if(pes==NULL) error("PES not defined before minimum");
       int ndim=pes->ndim();
@@ -328,10 +399,13 @@ int main(int argc, char ** argv) {
     if(dummy=="nsweeps_keep") { in >> nsweeps_keep; } 
   }
   
+  
   if(pes==NULL) pes=new Random_quadratic(2);
   if(mod==NULL) mod=new Quadratic_model;
   int n=pes->ndim();
-  
+
+  if(!nsweeps_keep) nsweeps_keep=pes->ndim();
+
   Fit_info finfo;
 
   
@@ -378,13 +452,12 @@ int main(int argc, char ** argv) {
       }
     }
     //
-    int use_quad=1;
     if(use_quad) { 
       //optimize_quad(quad, datas,models,c);
-
+      vector <Walker> allwalkers;
       if(it==0) quad.generate_guess(datas, models, c);
-      sample(quad, datas, models, finfo, c);
-
+      sample(quad, datas, models, finfo, c, allwalkers);
+      cout << "*****************Average Hessian direction choosing\n";
       c=finfo.cavg;
       vector <double> quadmin(n);
       quad.get_minimum(c,n,quadmin);
@@ -399,39 +472,38 @@ int main(int argc, char ** argv) {
         for(int j=0; j< n; j++) { cout << hess[i][j] << " "; }
         cout << endl;
       }
-      update_directions(hess,directions);
-
+      vector <double> evals;
+      update_directions(hess,evals, directions);
+      
+      cout << "eigenvalues: ";
+      for(int i=0; i< n; i++) cout << evals[i] << " ";
+      cout << endl;
+      
+      cout << "New directions : " << endl;
+      for(int i=0; i< n; i++) { 
+        for(int j=0; j< n; j++) { 
+          cout << directions[i][j] << " ";
+        }
+        cout << endl;
+      }
+      
+      average_directions(quad, allwalkers,evals, directions);
+      cout << "************Averaging over directions \n";
+      cout << "eigenvalues: ";
+      for(int i=0; i< n; i++) cout << evals[i] << " ";
+      cout << endl;
+      
+      cout << "New directions : " << endl;
+      for(int i=0; i< n; i++) { 
+        for(int j=0; j< n; j++) { 
+          cout << directions[i][j] << " ";
+        }
+        cout << endl;
+      }
+      
     }
   }
   
-  //Try removing the history to see what happens..
-  /*
-  for(int it=0; it < nit; it++) { 
-    cout << "####################Removing the first " << it << " iterations " << endl;
-    for(int d=0; d< n; d++) {
-      datas.erase(datas.begin());
-      models.erase(models.begin());
-    }
-    quad.generate_guess(datas, models, c);
-    sample(quad, datas, models, finfo, c);
-    cout << "finished sample " << endl;
-    c=finfo.cavg;
-    vector <double> quadmin(n);
-    quad.get_minimum(c,n,quadmin);
-    vector < vector <double> > hess;
-    quad.get_hessian(c,n,hess);
-    
-    cout << "currmin_from_quad: ";
-    for(int i=0; i< n; i++) { cout << quadmin[i] << "  "; } 
-    cout << endl;
-    cout << "hessian: \n";
-    for(int i=0; i< n; i++) {
-      for(int j=0; j< n; j++) { cout << hess[i][j] << " "; }
-      cout << endl;
-    }
-    update_directions(hess,directions);
-  }
-  */
   delete pes;
   delete mod;
 }
