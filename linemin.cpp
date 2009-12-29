@@ -424,6 +424,10 @@ int main(int argc, char ** argv) {
     else if(dummy=="cubic_mod" && mod == NULL) mod=new Cubic_model;
     else if(dummy=="trust_radius") in >> trust_rad;
     else if(dummy=="no_hessian") use_quad=0;
+    else if(dummy=="seed") { long int s1,s2;
+      in >> s1 >> s2;
+      rng.seed(s1,s2);
+    }
     else if(dummy=="currmin") {
       if(pes==NULL) error("PES not defined before minimum");
       int ndim=pes->ndim();
