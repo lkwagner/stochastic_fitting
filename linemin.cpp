@@ -21,8 +21,12 @@ using namespace std;
 
 typedef vector<double>::iterator dit_t;
 
-
-
+//------------------------------------------------------------------
+inline void append_number_fixed(string & str, int num){
+  char strbuff[100];
+  sprintf(strbuff, "%03d", num);
+  str+=strbuff;
+}
 
 
 //------------------------------------------------------------------
@@ -111,6 +115,13 @@ void average_directions(Quad_plus_line & quad,vector <Walker> &  allwalkers,
   for(vector< vector <double> >::iterator i=posdirections.begin(); 
       i!= posdirections.end(); i++) i->resize(n);
   
+  vector <ofstream * > eigenout(n);
+  for(int i=0; i< n; i++) { 
+    string nm="eigen";
+    append_number_fixed(nm,i);
+    eigenout[i]= new ofstream(nm.c_str());
+  }
+  
   int nwalkers=allwalkers.size();
   for(int i=0; i< n; i++) { 
     evals[i]=0;
@@ -123,39 +134,67 @@ void average_directions(Quad_plus_line & quad,vector <Walker> &  allwalkers,
   
   int npos=0;
   
+  double bestprob=allwalkers[0].prob;
+  double bestposprob=-1e99;
   for(vector<Walker>::iterator w=allwalkers.begin(); w!=allwalkers.end(); w++) {
     quad.get_hessian(w->c,n,hess);
     update_directions(hess,tevals, tdirections);
-    cout << "eval ";
-    for(int i=0; i< n; i++) { 
-      evals[i]+=tevals[i]/nwalkers;
-      cout << tevals[i] << " ";
-      for(int j=0; j< n; j++) { 
-        directions[i][j]+=tdirections[i][j]/nwalkers;
-      }
+    if(w->prob > bestprob) { 
+      directions=tdirections;
+      evals=tevals;
+      bestprob=w->prob;
     }
-    cout << endl;
+    
+    
+    //cout << "eval ";
+    
+    //for(int i=0; i< n; i++) { 
+      //evals[i]+=tevals[i]/nwalkers;
+      //cout << tevals[i] << " ";
+      //for(int j=0; j< n; j++) { 
+        //directions[i][j]+=tdirections[i][j]/nwalkers;
+       // if(tevals[n-1] > 0) *eigenout[i] << j << " " << tdirections[i][j] << endl;
+      //}
+      
+    //}
+    //cout << endl;
     if(tevals[n-1]> 0) { //our eigenvector routine sorts the eigenvalues
       npos++;
-      for(int i=0; i< n; i++) { 
-        posevals[i]+=tevals[i];
-        for(int j=0; j< n; j++) { 
-          posdirections[i][j]+=tdirections[i][j];
-        }
+      if(w->prob > bestposprob) { 
+        posevals=tevals;
+        posdirections=tdirections;
+        bestposprob=w->prob;
       }
+      //for(int i=0; i< n; i++) { 
+      //  posevals[i]+=tevals[i];
+      //  for(int j=0; j< n; j++) { 
+       //   posdirections[i][j]+=tdirections[i][j];
+       // }
+      //}
     }
   }
   
-    
+  for(int i=0; i< n; i++) { 
+    delete eigenout[i];
+  }
+
+  cout << "besteigen ";
+  for(int i=0; i< n; i++) cout << evals[i] << " ";
+  cout << endl;
+  
   
   if(npos >0) { 
-    cout << "Found positive definite matrices! " << endl;
-     for(int i=0; i< n; i++) { 
-       posevals[i]/=npos;
-       for(int j=0; j< n; j++) { 
-         posdirections[i][j]/=npos;
-       }
-     }
+    cout << "Found positive definite matrices! prob " 
+    << bestposprob << " best nonposdef " << bestprob << endl;
+     //for(int i=0; i< n; i++) { 
+     //  posevals[i]/=npos;
+     //  for(int j=0; j< n; j++) { 
+     //    posdirections[i][j]/=npos;
+     //  }
+     //}
+    cout << "bestpos ";
+    for(int i=0; i< n; i++) cout << posevals[i] << " ";
+    cout << endl;
     evals=posevals;
     directions=posdirections;
   }
@@ -163,12 +202,6 @@ void average_directions(Quad_plus_line & quad,vector <Walker> &  allwalkers,
 }
 
 
-//------------------------------------------------------------------
-inline void append_number_fixed(string & str, int num){
-  char strbuff[100];
-  sprintf(strbuff, "%03d", num);
-  str+=strbuff;
-}
 
 //------------------------------------------------------------------
 //Using a set of trial positions, estimate the RMS deviation.
@@ -371,24 +404,27 @@ int main(int argc, char ** argv) {
   ifstream in(argv[1]);
   int nsweeps_keep=0;
   int use_quad=1;
-
+  int powell_update=0;
+  double start_sigma=0.01;
   while(in >> dummy) { 
     if(dummy=="iterations") in >> nit;
-    if(dummy=="random_quad") { 
+    else if(dummy=="random_quad") { 
       int ndim; in >> ndim;
       pes=new Random_quadratic(ndim);
     }
-    if(dummy=="montecarlo_caller") { 
+    else if(dummy=="montecarlo_caller") { 
       pes=new MonteCarlo_caller(in);
     }
-    if(dummy=="random_cubic") { 
+    else if(dummy=="random_cubic") { 
       pes=new Random_cubic(in);
     }
-    if(dummy=="morse_mod" && mod == NULL) mod=new Morse_model;
-    if(dummy=="cubic_mod" && mod == NULL) mod=new Cubic_model;
-    if(dummy=="trust_radius") in >> trust_rad;
-    if(dummy=="no_hessian") use_quad=0;
-    if(dummy=="currmin") {
+    else if(dummy=="start_sigma") in >> start_sigma;
+    else if(dummy=="powell") { powell_update=1; use_quad=0; }
+    else if(dummy=="morse_mod" && mod == NULL) mod=new Morse_model;
+    else if(dummy=="cubic_mod" && mod == NULL) mod=new Cubic_model;
+    else if(dummy=="trust_radius") in >> trust_rad;
+    else if(dummy=="no_hessian") use_quad=0;
+    else if(dummy=="currmin") {
       if(pes==NULL) error("PES not defined before minimum");
       int ndim=pes->ndim();
       double dum=0;
@@ -396,7 +432,10 @@ int main(int argc, char ** argv) {
         in >> dum; currmin.push_back(dum);
       }
     }
-    if(dummy=="nsweeps_keep") { in >> nsweeps_keep; } 
+    else if(dummy=="nsweeps_keep") { in >> nsweeps_keep; } 
+    else { cerr << "Didn't understand " << dummy << endl;
+      exit(132);
+    }
   }
   
   
@@ -416,7 +455,7 @@ int main(int argc, char ** argv) {
   //for(int i=0; i< n; i++) { currmin[i]=10; } 
   vector < vector < double> > directions(n);
   for(int i=0; i < n; i++) directions[i].resize(n);
-  for(int i=0; i< n; i++) sigma[i]=0.01;
+  for(int i=0; i< n; i++) sigma[i]=start_sigma;
   for(int i=0; i< n; i++) 
     for(int j=0; j< n; j++) directions[i][j]= (i==j)?1.0:0.0;
   
@@ -424,9 +463,13 @@ int main(int argc, char ** argv) {
   vector <Line_model *> models;
   
   vector <Line_data> datas;
-  
+  Data_point firstpoint=gen_data(*pes, directions[0],currmin,0,sigma[0]);
+  double last_energy=firstpoint.val;
+  cout << "energy " << last_energy << " +/- " << 1.0/firstpoint.inverr << endl;
   for(int it=0; it < nit; it++) { 
-    
+    vector <double> min_start=currmin;
+    double max_decrease=0;
+    int max_decrease_index=0;
     for(int d=0; d< n; d++) { 
       Line_data tdata;
       tdata.start_pos.resize(n);
@@ -434,7 +477,18 @@ int main(int argc, char ** argv) {
       tdata.start_pos=currmin;
       tdata.direction=directions[d];
       find_minimum(trust_rad,10, *pes, *mod, tdata, finfo,sigma);
-
+      
+      //assuming that c[0] is E_0..dirty, but works for now..
+      double val0=finfo.cavg[0];
+      cout << "energy " << val0 << " +/- " << finfo.cer[0] 
+           <<  " decrease " << last_energy-val0 << endl;
+      if(last_energy-val0 > max_decrease) {
+        max_decrease=last_energy-val0;
+        max_decrease_index=d;
+      }
+      last_energy=val0;
+        
+      
       //generate_line(1.0,10,*pes,tdata);
       //sample(mod, tdata, finfo);
       for(int i=0; i< n; i++) { 
@@ -454,11 +508,16 @@ int main(int argc, char ** argv) {
     //
     if(use_quad) { 
       //optimize_quad(quad, datas,models,c);
+      /*
       vector <Walker> allwalkers;
       if(it==0) quad.generate_guess(datas, models, c);
       sample(quad, datas, models, finfo, c, allwalkers);
       cout << "*****************Average Hessian direction choosing\n";
       c=finfo.cavg;
+       */
+      quad.generate_guess(datas,models,c);
+      vector <Fix_information> fixes;
+      shake_quad(quad,datas,models,fixes,c);
       vector <double> quadmin(n);
       quad.get_minimum(c,n,quadmin);
       vector < vector <double> > hess;
@@ -486,9 +545,10 @@ int main(int argc, char ** argv) {
         }
         cout << endl;
       }
-      
+      /*
       average_directions(quad, allwalkers,evals, directions);
       cout << "************Averaging over directions \n";
+       
       cout << "eigenvalues: ";
       for(int i=0; i< n; i++) cout << evals[i] << " ";
       cout << endl;
@@ -500,7 +560,36 @@ int main(int argc, char ** argv) {
         }
         cout << endl;
       }
+       */
       
+    }
+    if(powell_update) { 
+      vector <double> totaldir(n);
+      double norm=0;
+      for(int d=0; d< n; d++) { 
+        totaldir[d]=currmin[d]-min_start[d];
+        norm+=totaldir[d]*totaldir[d];
+      }
+      norm=sqrt(norm);
+      for(int d=0; d< n; d++) totaldir[d]/=norm;
+      directions[max_decrease_index]=totaldir;
+      Line_data tdata;
+      tdata.start_pos.resize(n);
+      tdata.direction.resize(n);
+      tdata.start_pos=currmin;
+      tdata.direction=totaldir;      
+      find_minimum(trust_rad,10,*pes,*mod,tdata,finfo,sigma);
+      
+      cout << "energy " << finfo.cavg[0] << " +/- " << finfo.cer[0] 
+      <<  " decrease " << last_energy-finfo.cavg[0] << " (finishing step) " <<  endl;
+      last_energy=finfo.cavg[0];
+
+      for(int i=0; i< n; i++) { 
+        cout << "powell_dir ";
+        for(int j=0; j< n; j++) cout << directions[i][j] << " ";
+        cout << endl;
+      }
+      cout << "powell_dir \n";
     }
   }
   

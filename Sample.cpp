@@ -516,7 +516,7 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
   for(vector <Walker>::iterator i=configs.begin(); i!= configs.end(); i++)
     *i=walker;
   //int nstep=10000;
-  int nstep=  100;
+  int nstep=  16;
   int decorr=100;
   //int warmup=200;
   int warmup=10;
