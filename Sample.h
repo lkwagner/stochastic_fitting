@@ -26,7 +26,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
 
 
 void sample(Line_model & mod, const Line_data & line, Fit_info & finfo,
-            int verbose=1);
+            vector <Walker> & allwalkers, int verbose=1);
   
 
 void optimize_quad(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models,

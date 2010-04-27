@@ -5,10 +5,13 @@ HEADERS=Array.h Line_model.h MatrixAlgebra.h Min.h Point.h Quad_plus_line.h Samp
 CXXFLAGS:= -O2 
 #-DNDEBUG 
 
-all: linemin
+all: linemin line_fit
 
 linemin: $(OBJS) $(HEADERS) linemin.o
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) linemin.o
+
+line_fit: $(OBJS) $(HEADERS) line_fit.o
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) line_fit.o
 
 %.o:%.cpp  $(HEADERS)
 	$(CXX) -c  $(CXXFLAGS)  -o $@ $<

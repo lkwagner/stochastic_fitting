@@ -96,7 +96,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
 }
 
 void sample(Line_model & mod, const Line_data & data, Fit_info & finfo,
-            int verbose) { 
+             vector <Walker> & allwalkers, int verbose) { 
   Fix_information fakefix;
   Walker walker;
   find_good_guess(mod,data, fakefix, walker.c);
@@ -169,6 +169,9 @@ void sample(Line_model & mod, const Line_data & data, Fit_info & finfo,
         if(navgpts > 0) { 
           finfo.minerr[m]=(1-1.0/navgpts)*oldvar+(navgpts+1)*(finfo.min[m]-oldmin)*(finfo.min[m]-oldmin);
         }
+      }
+      if(step%500==0) { 
+        allwalkers.push_back(walker);
       }
       
       
@@ -247,48 +250,7 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
       }
     }
   }
-/*
-  cout << "Random casting " << endl;
-  
-  for(int i=0; i< nit; i++) { 
-    quad.generate_guess(data,models,c);
-    optimize_quad(quad, data, models,fixes,c);
-    double p=quad.prob(data, models, c,fixes);
-    cout.flush();
-    //cout << "prob " << p << endl;
-    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
-      best_c=c;
-      best_p=p;
-      if(1) { 
-        cout << " it " << i << " ";
-        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
-        cout << p  << endl;
-      }
-    }
-  }
-  c=best_c;
-  
-  //Also try shaking the best-so-far parameters by a gaussian
-  //
-  
-  cout << "allvars " << endl;
-  
-  for(int i=0; i< 2*nit; i++) { 
-    for(int j=0; j< best_c.size(); j++) c[j]=best_c[j]*(1+sig*rng.gasdev());
-    optimize_quad(quad, data, models,fixes,c);
-    double p=quad.prob(data, models, c,fixes);
-    cout.flush();
-    //cout << "prob " << p << endl;
-    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
-      best_c=c;
-      best_p=p;
-      if(1) { 
-        cout << " it " << i << " ";
-        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
-        cout << p  << endl;
-      }
-    }
-  }*/
+
   
   cout << "individual shake " << endl;
   for(int i=0; i< 2*nit; i++) { 
@@ -309,43 +271,11 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
       }
     }
   }
-  /*
-  cout << "minima " << endl;
-  //shake the minima particularly..
-  for(int i=0; i< 2*nit; i++) { 
-    for(int j=0; j< ndim+1; j++) c[j]=best_c[j]*(1+sig*rng.gasdev());
-    optimize_quad(quad, data, models,fixes,c);
-    double p=quad.prob(data, models, c,fixes);
-    cout.flush();
-    //cout << "prob " << p << endl;
-    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
-      best_c=c;
-      best_p=p;
-      if(1) { 
-        cout << " it " << i << " ";
-        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
-        cout << p  << endl;
-      }
-    }
-  }*/
   
   c=best_c;
   
   
 }
-
-//------------------------------------------------------------------------------
-/*
-double gradient(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models,
-                vector <Fix_information> & fixes,
-                const vector <double> & c, int d, double & prob) { 
-   prob=quad.del_prob(data, models, c,fixes);
-  double del=1e-12;
-  vector <double> tmpc=c;
-  tmpc[d]+=del;
-  double px=quad.prob(data,models, tmpc,fixes);
-  return (px-prob)/del;
-}*/
 
 //------------------------------------------------------------------------------
 

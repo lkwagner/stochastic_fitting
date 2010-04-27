@@ -98,5 +98,28 @@ public:
   
 };
 
+class Linear_model: public Line_model { 
+public:
+  virtual const void generate_guess(const Line_data &,const Fix_information &, vector <double> & c);
+  virtual const void minimum(const vector <double> & c, vector <double> & min) { 
+    min.resize(1); min[0]=0;
+  }
+  virtual const int nparms(int fix) { if(fix) return 0; else return 2; }
+  virtual const double  func(const vector <double> & c,double t) const {
+    return c[0]+c[1]*t;
+  }
+  virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
+                               vector <double> & c_out) { 
+    error("No conversion for linear model"); } 
+  virtual double curve(const vector <double> & c) { return 0; } 
+  virtual const void downconvert_c(const Fix_information &, 
+                                   const vector <double> & c_in, vector <double> & c_out)
+  {  error("No downconversion for linear model");}
+  
+  
+};
+
+
+
 
 #endif //LINE_MODEL_H_INCLUDED

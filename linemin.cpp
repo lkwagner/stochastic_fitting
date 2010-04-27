@@ -340,8 +340,8 @@ void find_minimum(double range, int maxpts, Data_generator & pes,
   data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t-0.8*range,start_sigma));
   data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t+0.3*range,start_sigma));
   data.data.push_back(gen_data(pes,data.direction,data.start_pos,p2.t-0.3*range,start_sigma));
-
-  sample(mod, data, finfo);
+  vector <Walker> allwalkers;
+  sample(mod, data, finfo, allwalkers);
   base_t=finfo.min[0];
   
   double rms=rms_deviation(mod, data,finfo.cavg);
@@ -384,6 +384,17 @@ void find_minimum(double range, int maxpts, Data_generator & pes,
     log << t << " " << mod.func(finfo.cavg, t) << " 0.0 " << endl;
   }
   
+  /*
+  int nrandom=10;
+  for(int rand=0; rand < nrandom; rand++) { 
+    log << endl << "#random sampling of fits " << endl;
+    vector <double> ctmp=finfo.cavg;
+    int nparm=finfo.cavg.size();
+    for(int i=0; i< nparm; i++) ctmp[i]+=rng.gasdev()*finfo.cer[i];
+    for(double t=begin; t < end; t+=res) { 
+      log << t << " " << mod.func(ctmp, t) << " 0.0 " << endl;
+    }
+  }*/
   
 
   call_num++;
@@ -511,17 +522,56 @@ int main(int argc, char ** argv) {
     }
     //
     if(use_quad) { 
-      //optimize_quad(quad, datas,models,c);
-      /*
-      vector <Walker> allwalkers;
-      if(it==0) quad.generate_guess(datas, models, c);
-      sample(quad, datas, models, finfo, c, allwalkers);
-      cout << "*****************Average Hessian direction choosing\n";
-      c=finfo.cavg;
-       */
       quad.generate_guess(datas,models,c);
       vector <Fix_information> fixes;
       shake_quad(quad,datas,models,fixes,c);
+      
+      //--Just for making a "pretty" graph
+      int totlines=models.size();
+      cout << "------------------- All lines" << endl;
+      for(int d=0; d< totlines; d++) { 
+        vector <Walker> allwalkers;
+        sample(*(models[d]), datas[d], finfo, allwalkers,1);
+        cout << "line " << d  << endl;
+        for(int i=0; i< min(10,int(allwalkers.size())); i++) { 
+          vector <double> c=allwalkers[i].c;
+          /*
+          cout << datas[d].start_pos[0] << " + u*" << datas[d].direction[0] 
+          << ", " << datas[d].start_pos[1] << " + u*" << datas[d].direction[1]
+          << " , " <<  c[0] << " + " << c[2] << "*(u-" << c[1] << ")*(u-" << 
+            c[1]<< " )+" << c[3]<< " *(u-" << c[1]<< ")*(t-" << c[1] << ")*(u-"
+          << c[1]<<")" << endl; */
+          cout << datas[d].start_pos[0] << " + (u+"<< c[1] << ")*" << datas[d].direction[0] 
+          << ", " << datas[d].start_pos[1] << " + (u+"<< c[1] << ")*" << datas[d].direction[1]
+          << " , " <<  c[0] << " + " << c[2] << "*u*u+" << c[3]<< " *u*u*u " << endl;
+          
+        }
+        /*
+        string logname="plot";
+        append_number_fixed(logname,d);
+        ofstream log(logname.c_str());
+        double base_t=finfo.min[0];
+        double begin=base_t-trust_rad*1.2, end=base_t+trust_rad*1.2;
+        double res=(end-begin)/400.0;
+        log << "#data " << endl;
+        for(vector<Data_point>::const_iterator da=datas[d].data.begin(); 
+            da!=datas[d].data.end(); da++) { 
+          log << da->t << " " << da->val <<  " " << 1.0/da->inverr << endl;
+        }
+        log << endl;
+        for(vector<Walker>::iterator w=allwalkers.begin(); w!=allwalkers.end(); w++) { 
+          for(double t=begin; t < end; t+=res) { 
+            log << t << " " << models[d]->func(w->c, t) << " 0.0 " << endl;
+          }
+          log << endl;
+        } */
+      }
+      
+      //vector <Walker> allwalkers;
+      //sample(quad, datas, models, finfo, c, allwalkers);
+
+      //-----done with the graph
+      
       vector <double> quadmin(n);
       quad.get_minimum(c,n,quadmin);
       vector < vector <double> > hess;
@@ -583,6 +633,12 @@ int main(int argc, char ** argv) {
       tdata.start_pos=currmin;
       tdata.direction=totaldir;      
       find_minimum(trust_rad,10,*pes,*mod,tdata,finfo,sigma);
+      
+      //reset the directions to make sure we don't get stuck..
+      if((it+1)%n == 0) { 
+        for(int i=0; i< n; i++) 
+          for(int j=0; j< n; j++) directions[i][j]= (i==j)?1.0:0.0;
+      }
       
       cout << "energy " << finfo.cavg[0] << " +/- " << finfo.cer[0] 
       <<  " decrease " << last_energy-finfo.cavg[0] << " (finishing step) " <<  endl;

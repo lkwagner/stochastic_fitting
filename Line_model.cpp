@@ -248,3 +248,18 @@ const void Quadratic_model::downconvert_c(const Fix_information & fix,
 }
 
 //------------------------------------------------------------------------------
+
+const void Linear_model::generate_guess(const Line_data &data,const Fix_information &fit, 
+                                        vector <double> & c) { 
+  c.resize(2);
+  vector <Data_point>::const_iterator smallt=data.data.begin(),larget=data.data.begin();
+  for(vector<Data_point>::const_iterator t=data.data.begin(); t!= data.data.end(); t++) {
+    if(t->t < smallt->t) smallt=t;
+    if(t->t > larget->t) larget=t;
+  }
+  c[1]=(larget->val-smallt->val)/(larget->t-smallt->t);
+  c[0]=smallt->val-c[1]*smallt->t;
+}
+//------------------------------------------------------------------------------
+
+
