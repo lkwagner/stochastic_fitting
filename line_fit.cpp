@@ -13,6 +13,7 @@
 #include "Min.h"
 #include "PES.h"
 #include "Data_generator.h"
+#include "generate_line.h"
 using namespace std;
 
 
@@ -22,29 +23,6 @@ using namespace std;
 typedef vector<double>::iterator dit_t;
 
 //------------------------------------------------------------------
-inline void append_number_fixed(string & str, int num){
-  char strbuff[100];
-  sprintf(strbuff, "%03d", num);
-  str+=strbuff;
-}
-
-
-//------------------------------------------------------------------
-
-//------------------------------------------------------------------
-//Using a set of trial positions, estimate the RMS deviation.
-double rms_deviation(const Line_model & mod, const Line_data & data, const vector <double> & c) { 
-  double rms=0;
-  int npoints=0;
-  for(vector<Data_point>::const_iterator d=data.data.begin(); d!=data.data.end(); d++) { 
-    double f=mod.func(c,d->t);
-    rms+=(d->val-f)*(d->val-f);
-    npoints++;
-  }
-  return sqrt(rms/npoints);
-  
-}
-
 
 void fit_line(Line_model & mod, Line_data & data, Fit_info & finfo) { 
   vector <Walker> allwalkers;
