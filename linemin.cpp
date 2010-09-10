@@ -61,110 +61,6 @@ void update_directions(vector < vector < double> > & hess,
 
 //------------------------------------------------------------------
 
-
-void average_directions(Quad_plus_line & quad,vector <Walker> &  allwalkers,
-                        vector <double> & evals,vector <vector <double> > & directions) { 
-  int n=directions.size();
-  assert(directions.size()==directions[0].size());
-
-  vector < vector <double> > hess;
-  vector <double> tevals(n);
-  vector <double> posevals(n);
-  vector < vector <double> > tdirections(n);
-  vector <vector <double> > posdirections(n);
-  for(vector< vector <double> >::iterator i=tdirections.begin(); 
-      i!= tdirections.end(); i++) i->resize(n);
-  for(vector< vector <double> >::iterator i=posdirections.begin(); 
-      i!= posdirections.end(); i++) i->resize(n);
-  
-  vector <ofstream * > eigenout(n);
-  for(int i=0; i< n; i++) { 
-    string nm="eigen";
-    append_number_fixed(nm,i);
-    eigenout[i]= new ofstream(nm.c_str());
-  }
-  
-  int nwalkers=allwalkers.size();
-  for(int i=0; i< n; i++) { 
-    evals[i]=0;
-    posevals[i]=0;
-    for(int j=0; j< n; j++) { 
-      directions[i][j]=0;
-      posdirections[i][j]=0;
-    }
-  }
-  
-  int npos=0;
-  
-  double bestprob=allwalkers[0].prob;
-  double bestposprob=-1e99;
-  for(vector<Walker>::iterator w=allwalkers.begin(); w!=allwalkers.end(); w++) {
-    quad.get_hessian(w->c,n,hess);
-    update_directions(hess,tevals, tdirections);
-    if(w->prob > bestprob) { 
-      directions=tdirections;
-      evals=tevals;
-      bestprob=w->prob;
-    }
-    
-    
-    //cout << "eval ";
-    
-    //for(int i=0; i< n; i++) { 
-      //evals[i]+=tevals[i]/nwalkers;
-      //cout << tevals[i] << " ";
-      //for(int j=0; j< n; j++) { 
-        //directions[i][j]+=tdirections[i][j]/nwalkers;
-       // if(tevals[n-1] > 0) *eigenout[i] << j << " " << tdirections[i][j] << endl;
-      //}
-      
-    //}
-    //cout << endl;
-    if(tevals[n-1]> 0) { //our eigenvector routine sorts the eigenvalues
-      npos++;
-      if(w->prob > bestposprob) { 
-        posevals=tevals;
-        posdirections=tdirections;
-        bestposprob=w->prob;
-      }
-      //for(int i=0; i< n; i++) { 
-      //  posevals[i]+=tevals[i];
-      //  for(int j=0; j< n; j++) { 
-       //   posdirections[i][j]+=tdirections[i][j];
-       // }
-      //}
-    }
-  }
-  
-  for(int i=0; i< n; i++) { 
-    delete eigenout[i];
-  }
-
-  cout << "besteigen ";
-  for(int i=0; i< n; i++) cout << evals[i] << " ";
-  cout << endl;
-  
-  
-  if(npos >0) { 
-    cout << "Found positive definite matrices! prob " 
-    << bestposprob << " best nonposdef " << bestprob << endl;
-     //for(int i=0; i< n; i++) { 
-     //  posevals[i]/=npos;
-     //  for(int j=0; j< n; j++) { 
-     //    posdirections[i][j]/=npos;
-     //  }
-     //}
-    cout << "bestpos ";
-    for(int i=0; i< n; i++) cout << posevals[i] << " ";
-    cout << endl;
-    evals=posevals;
-    directions=posdirections;
-  }
-  
-}
-
-
-
 int main(int argc, char ** argv) { 
   
   int nit=15; 
@@ -224,7 +120,6 @@ int main(int argc, char ** argv) {
   if(!nsweeps_keep) nsweeps_keep=pes->ndim();
 
   Fit_info finfo;
-
   
   Quad_plus_line quad;
   vector <double> c;
@@ -288,6 +183,7 @@ int main(int argc, char ** argv) {
       shake_quad(quad,datas,models,fixes,c);
       
       //--Just for making a "pretty" graph
+      /*
       int totlines=models.size();
       cout << "------------------- All lines" << endl;
       for(int d=0; d< totlines; d++) { 
@@ -302,6 +198,7 @@ int main(int argc, char ** argv) {
           
         }
       }
+      */
       
       //-----done with the graph
       
@@ -332,23 +229,6 @@ int main(int argc, char ** argv) {
         }
         cout << endl;
       }
-      /*
-      average_directions(quad, allwalkers,evals, directions);
-      cout << "************Averaging over directions \n";
-       
-      cout << "eigenvalues: ";
-      for(int i=0; i< n; i++) cout << evals[i] << " ";
-      cout << endl;
-      
-      cout << "New directions : " << endl;
-      for(int i=0; i< n; i++) { 
-        for(int j=0; j< n; j++) { 
-          cout << directions[i][j] << " ";
-        }
-        cout << endl;
-      }
-       */
-      
     }
     if(powell_update) { 
       vector <double> totaldir(n);
