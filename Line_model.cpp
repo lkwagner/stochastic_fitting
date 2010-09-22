@@ -125,6 +125,9 @@ const double Cubic_model::func(const vector <double> & c, double t) const {
 }
 
 
+double Cubic_model::funcmin(const vector <double> & c) { 
+  return c[0];
+}
 //------------------------------------------------------------------------------
 
 const void Cubic_model::generate_guess(const Line_data & data, const Fix_information & fix,

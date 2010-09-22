@@ -10,6 +10,8 @@ struct Fit_info {
   vector <double> cer;
   vector <double> min;    //the average minimum.  May have several concatenated
   vector <double> minerr;
+  double curve, curveerr; //curvature at the first minimum
+  double funcmin, funcminerr; //Error at the function minimum
   void print(ostream & os);
 };
 

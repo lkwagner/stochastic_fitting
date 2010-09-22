@@ -19,7 +19,7 @@ Data_point gen_data(Data_generator & pes, const vector <double> & direction,
   pt.t=t;
   pt.val=f;
   pt.inverr=1.0/err;
-  cout << "data: " << pt.t << " " << pt.val << " " << err << endl;
+  //cout << "data: " << pt.t << " " << pt.val << " " << err << endl;
   return pt;
 }
 

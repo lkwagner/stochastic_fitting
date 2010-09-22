@@ -121,6 +121,7 @@ void sample(Line_model & mod, const Line_data & data, Fit_info & finfo,
   int nminima=min.size();
   finfo.min.resize(min.size());
   finfo.minerr.resize(min.size());
+  finfo.curve=finfo.curveerr=finfo.funcmin=finfo.funcminerr=0.0;
   for(dit_t i=finfo.min.begin(); i!= finfo.min.end(); i++) *i=0.0;
   for(dit_t i=finfo.minerr.begin(); i!= finfo.minerr.end(); i++) *i=0.0;
   
@@ -162,6 +163,19 @@ void sample(Line_model & mod, const Line_data & data, Fit_info & finfo,
         }
       }
       mod.minimum(walker.c,min);
+      double curve=mod.curve(walker.c);
+      double funcmin=mod.funcmin(walker.c);
+      double oldavg=finfo.curve;
+      finfo.curve=finfo.curve+(curve-finfo.curve)/(navgpts+1);
+      if(navgpts>0) 
+        finfo.curveerr=(1-1.0/navgpts)*finfo.curveerr+
+          (navgpts+1)*(finfo.curve-oldavg)*(finfo.curve-oldavg);
+      oldavg=finfo.funcmin;
+      finfo.funcmin=finfo.funcmin+(funcmin-finfo.funcmin)/(navgpts+1);
+      if(navgpts>0) 
+        finfo.funcminerr=(1-1.0/navgpts)*finfo.funcminerr+
+          (navgpts+1)*(finfo.funcmin-oldavg)*(finfo.funcmin-oldavg);
+
       for(int m=0; m < nminima; m++) { 
         double oldmin=finfo.min[m];
         double oldvar=finfo.minerr[m];
@@ -182,6 +196,11 @@ void sample(Line_model & mod, const Line_data & data, Fit_info & finfo,
   for(int p=0; p < nparms; p++) 
     vars[p]=sqrt(vars[p]);
   
+  for(int m=0; m < nminima; m++) { 
+    finfo.minerr[m]=sqrt(finfo.minerr[m]);
+  }
+  finfo.curveerr=sqrt(finfo.curveerr);
+  finfo.funcminerr=sqrt(finfo.funcminerr);
   if(verbose) { 
     cout << "acceptance " << acc/(nstep*nparms) << endl;
     cout << "timesteps   avg   err" << endl;
@@ -233,7 +252,7 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
   int nparms=c.size();
   int ndim=data[0].direction.size();
   cout << "allvars " << endl;
-  
+ /* 
   for(int i=0; i< 2*nit; i++) { 
     for(int j=0; j< best_c.size(); j++) c[j]=best_c[j]*(1+sig*rng.gasdev());
     optimize_quad(quad, data, models,fixes,c);
@@ -250,6 +269,7 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
       }
     }
   }
+  */
 
   
   cout << "individual shake " << endl;

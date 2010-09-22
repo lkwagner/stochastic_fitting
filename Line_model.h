@@ -52,7 +52,7 @@ public:
   virtual const void minimum(const vector <double> & c, vector <double> & min)=0;
   //return the curvature at the minum;
   virtual double curve(const vector <double> & c) { error("Curvature not supported for this Line_model"); }
-  
+  virtual double funcmin(const vector <double> & c) { error("function min not supported for this Line_model"); }
 };
 
 
@@ -76,6 +76,7 @@ public:
   virtual const void convert_c(const Fix_information &, const vector <double> & c_in, 
                                vector <double> & c_out);
   virtual double curve(const vector <double> & c);
+  virtual double funcmin(const vector <double> & c);
   virtual const void downconvert_c(const Fix_information &, 
                                    const vector <double> & c_in, vector <double> & c_out);
 
