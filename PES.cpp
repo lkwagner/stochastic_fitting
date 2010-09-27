@@ -63,3 +63,18 @@ double Potential_energy_surface::eval_pes(const vector <double> & x) {
   }
   return f;
 }
+
+
+void Potential_energy_surface::eval_grad(const vector <double> & x,vector <double> & grad) { 
+ assert(x.size()==C.GetDim(0));
+ int n=C.GetDim(0);
+ grad.resize(n);
+ for(vector<double>::iterator g=grad.begin(); g!=grad.end(); g++) *g=0.0;
+ for(int i=0; i< n; i++) { 
+   for(int j=0; j< n; j++) { 
+     grad[i]+=2.0*C(i,j)*(x[j]-minima[j]);
+   }
+ }
+
+}
+

@@ -242,51 +242,29 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
   double sig=0.6;
 
   optimize_quad(quad, data, models, fixes, c);
+  best_c=c;
   double best_p=quad.prob(data,models, c,fixes);
   cout << "initial probability ";
   for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
   cout << best_p  << endl;
   
   //int nit=1000;
-  int nit=1000;
+  int nit=10;
   int nparms=c.size();
+  int nsubit=nparms;
   int ndim=data[0].direction.size();
-  cout << "allvars " << endl;
- /* 
-  for(int i=0; i< 2*nit; i++) { 
-    for(int j=0; j< best_c.size(); j++) c[j]=best_c[j]*(1+sig*rng.gasdev());
-    optimize_quad(quad, data, models,fixes,c);
-    double p=quad.prob(data, models, c,fixes);
-    cout.flush();
-    //cout << "prob " << p << endl;
-    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
-      best_c=c;
-      best_p=p;
-      if(1) { 
-        cout << " it " << i << " ";
-        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
-        cout << p  << endl;
-      }
-    }
-  }
-  */
-
-  
   cout << "individual shake " << endl;
-  for(int i=0; i< 2*nit; i++) { 
-    //for(int j=0; j< best_c.size(); j++);
+  for(int i=0; i< nit*nsubit; i++) { 
     int j=int(best_c.size()*rng.ulec());
+    c=best_c;
     c[j]=best_c[j]*(1+sig*rng.gasdev());
     optimize_quad(quad, data, models,fixes,c);
     double p=quad.prob(data, models, c,fixes);
-    cout.flush();
-    //cout << "prob " << p << endl;
     if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
       best_c=c;
       best_p=p;
       if(1) { 
         cout << " it " << i << " ";
-        for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
         cout << p  << endl;
       }
     }
@@ -295,6 +273,44 @@ void shake_quad(Quad_plus_line & quad, vector <Line_data> & data,
   c=best_c;
   
   
+}
+
+
+
+void anneal_quad(Quad_plus_line & quad, vector <Line_data> & data, 
+                    vector <Line_model *> & models, vector <Fix_information> & fixes,
+                         vector <double> & c) { 
+  quad.generate_guess(data,models, c);  
+  vector <double> best_c=c;
+  //optimize_quad(quad, data, models, fixes, c);
+  double best_p=quad.prob(data,models, c,fixes);
+  cout << "initial probability ";
+  for(dit_t i=c.begin(); i!= c.end(); i++) cout << *i << " ";
+  cout << best_p  << endl;
+
+  vector <double> tstep=c;
+
+  for(vector<double>::iterator t=tstep.begin(); t!=tstep.end(); t++) *t=0.1*(*t);
+
+  int nit=4;
+  int temp_start=fabs(0.1*best_p);
+  double temp=temp_start;
+  for(int i=0; i< nit; i++) { 
+     for(int p=0; p < c.size(); p++) {
+       double nwc=best_c[p]+tstep[p]*rng.ulec();
+       double del=quad.delta_prob(data,models,fixes,best_c,p,nwc);
+       if(rng.ulec() < exp(del/temp)) { 
+         cout << "accept " << del <<  " acceptance " << exp(-del/temp) << endl;
+         best_c[p]=nwc;
+         tstep[p]*=1.01;
+       }
+       else { tstep[p]*=0.99; } 
+     }
+     temp=temp_start*(1.0-double(i)/double(nit+1));
+     cout << "temp " << temp << " prob " << quad.prob(data,models,c,fixes) << endl;
+  }
+  optimize_quad(quad,data,models,fixes,best_c);
+
 }
 
 //------------------------------------------------------------------------------

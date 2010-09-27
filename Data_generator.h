@@ -12,6 +12,10 @@ class Data_generator {
 public:
   virtual void eval(const vector <double> & x, const double desired_err, 
                     double & f, double & err)=0;
+  virtual int gradient(const vector <double> & x, vector <double> & grad, vector <double> & err) { 
+    return 0;
+  }
+
   virtual int ndim()=0;
 };
 
@@ -26,12 +30,24 @@ public:
     f=pes.eval_pes(x)+rng.gasdev()*desired_err;
     err=desired_err;
   }
+  virtual int gradient(const vector <double> & x, vector <double> & grad, vector <double> & err) { 
+    grad.resize(x.size());
+    err.resize(x.size());
+    pes.eval_grad(x,grad);
+  
+    for(vector<double>::iterator i=grad.begin(); i!=grad.end(); i++) *i+=sigma_grad*rng.gasdev();
+    for(vector<double>::iterator i=err.begin(); i!=err.end(); i++) *i=sigma_grad;
+    return 1;
+  }
+
   virtual int ndim() { return pes.ndim(); } 
   Random_quadratic(int n) { 
     pes.gen_pes(n);
+    sigma_grad=0.1;
   }
 private:
   Potential_energy_surface pes;
+  double sigma_grad;
 };
 
 //------------------------------------------------------------------

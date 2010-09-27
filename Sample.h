@@ -37,6 +37,9 @@ void optimize_quad(Quad_plus_line & quad, vector <Line_data> & data, vector <Lin
 void shake_quad(Quad_plus_line & quad, vector <Line_data> & data, 
                 vector <Line_model *> & models, vector <Fix_information> & fixes,
                 vector <double> & c);  
+void anneal_quad(Quad_plus_line & quad, vector <Line_data> & data, 
+                    vector <Line_model *> & models, vector <Fix_information> & fixes,
+                         vector <double> & c) ;
 //startc can be a reasonable guess from a previous fit
 void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models, 
             Fit_info & finfo, vector <double> & startc, vector <Walker> & allwalkers, int verbose=1);

@@ -2,6 +2,7 @@
 #include "ulec.h"
 #include "Sample.h"
 #include "macopt.h"
+#include "MatrixAlgebra.h"
 //The format of c will be:
 // E_0 , vector of minima, then the unique values of Hessian in the following order
 // for(i=0; i< n; i++)  for(j=i; j< n; j++) H(i,j)
@@ -118,6 +119,8 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
     //cout << min_en_pos[i] << " ";
   }
   //cout << endl;
+
+  
   
   vector <Fit_info> finfo(nlines);
   vector <vector <double> > guesses;
@@ -130,8 +133,23 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
     guesses.push_back(c_tmp);
     curves.push_back(models[i]->curve(c_tmp));
   }
+
+
+  Array2 <double> H(ndim,ndim),Q(ndim,ndim);
+  for(int i=0; i < ndim; i++) { 
+     for(int j=0; j< ndim; j++) { 
+       Q(i,j)=data[nlines-ndim+i].direction[j];
+     }
+  }
+  Array2 <double> Qinv(ndim, ndim);
+  InvertMatrix(Q,Qinv,ndim);
+  H=0;
+  for(int i=0; i< ndim; i++) 
+    for(int j=0; j< ndim; j++) 
+      for(int k=0; k < ndim; k++) 
+        H(i,k)+=Q(i,j)*curves[j+nlines-ndim]*Qinv(j,k);
   
-  
+  /*
   Minimize_curve_err  min((ndim+1)*ndim/2,1,0.01,100,1);
   min.data=data;
   min.ndim=ndim;
@@ -139,17 +157,18 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
   vector <double> hess;
   min.optimize(hess);
   for(int i=0; i< (ndim+1)*ndim/2; i++) c[count++]=hess[i];
-  
+  */
   /*
   Array2 <double> H(ndim, ndim);
   generate_posdef_matrix(ndim,H);
+  */
   assert(count==ndim+1);
   for(int i=0; i< ndim; i++) { 
     for(int j=i; j< ndim; j++) { 
       c[count++]=H(i,j);
     }
   }
-   */
+   
 
   set_fixes(data, c, fixes);
   for(int i=0; i< nlines; i++) { 

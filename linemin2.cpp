@@ -2,12 +2,15 @@
 using namespace std;
 
 
+
+
+
 int main(int argc, char ** argv) { 
   
   int nit=15; 
   
   string dummy;
-  int ndim=10;
+  int ndim=1;
   Data_generator * pes=new Random_quadratic(ndim);
   Line_model * mod=new Cubic_model;
   vector <double> currmin;
@@ -27,10 +30,16 @@ int main(int argc, char ** argv) {
       min_infer.addLine(*pes,*mod,search,d);
       cout << "currx "; for(int i=0; i< ndim; i++) cout << search.currx[i] << " ";
       cout << endl;
+      Gradient_data tmpgrad; tmpgrad.x=search.currx;
+      if(pes->gradient(tmpgrad.x,tmpgrad.grad,tmpgrad.sigma)) { 
+        cout << "adding gradient!" << endl;
+        min_infer.addGradient(tmpgrad);
+      }
     }
 
     vector <vector <double> > hess; double e0; vector <double> hess_min;
     min_infer.calcHess(search.trust_rad,e0,hess_min,hess);
+    cout << "hess: " << endl;
     for(int i=0; i< ndim; i++) { 
       cout << "hess: " ;
       for(int j=0; j< ndim; j++) { 
@@ -38,6 +47,11 @@ int main(int argc, char ** argv) {
       }
       cout << endl;
     }
+    vector <double> evals;
+    search.update_directions(hess,evals);
+    cout << "evals ";
+    for(int n=0; n < ndim; n++)  cout << evals[n] << " ";
+    cout << endl;
   }
 
 

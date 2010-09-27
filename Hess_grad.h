@@ -14,6 +14,10 @@ class Hess_grad {
   public:
     void generate_guess(const vector <Gradient_data> & data, vector <double> & c);
     double prob(const vector <Gradient_data> & data, const vector <double> & c);
+    double grad_prob(const vector <Gradient_data> & data, const vector <double> & c, 
+        vector <double> & g);
 };
+
+void test_hess_gradients(const vector <Gradient_data> & data, const vector<double> & c);
 
 #endif //HESS_GRAD_H_INCLUDED

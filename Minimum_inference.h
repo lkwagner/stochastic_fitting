@@ -19,6 +19,7 @@ struct Search_data {
       for(int j=0; j< ndim; j++) directions[i][j]= i==j?1:0;
     }
   }
+  void update_directions(vector < vector <double> > & hess, vector <double> & evals);
   double trust_rad,sigma;
   vector <double> currx;
   vector < vector < double> > directions;
@@ -35,7 +36,7 @@ class Minimum_inference {
   public:
     //modify the internal state of the object, don't modify the parameters
     int addLine(Data_generator & pes, Line_model & mod,  Search_data & search,int d);
-    int addForce(Gradient_data & grad);
+    int addGradient(Gradient_data & grad);
     void readState(istream & is);
 
     //Don't modify the internal state, only return information

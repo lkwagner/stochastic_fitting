@@ -11,6 +11,7 @@ public:
   int ndim() { return C.GetDim(0); } 
   double eval_pes(const vector <double> & x);
   void get_minima(Array1 <double> & min) { min=minima; } 
+  void eval_grad(const vector <double> & x,vector <double> & grad);
 private:
   Array2 <double> C;
   Array1 <double> minima;

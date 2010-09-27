@@ -1,6 +1,7 @@
 #include "Minimum_inference.h"
 #include "generate_line.h"
 #include "Min.h"
+#include "MatrixAlgebra.h"
 
 int Minimum_inference::addLine(Data_generator & pes, Line_model & mod, Search_data & search, int d) {  
   cout << "addline " << endl;
@@ -29,10 +30,10 @@ int Minimum_inference::addLine(Data_generator & pes, Line_model & mod, Search_da
 
 //----------------------------------------------------------------------
 
-int Minimum_inference::addForce(Data_generator & pes, double sigma, vector <double> & x) { } 
+int Minimum_inference::addGradient(Gradient_data & grad) { gradients.push_back(grad); }
 void Minimum_inference::readState(istream & is) { } 
 
-
+//----------------------------------------------------------------------
 
 void Minimum_inference::calcHess(double trust_rad, double & E0, vector <double> & min, 
     vector < vector < double > > & hess) {
@@ -41,10 +42,51 @@ void Minimum_inference::calcHess(double trust_rad, double & E0, vector <double> 
   Quad_plus_line quad;
   vector <Fix_information> fixes;
   shake_quad(quad,lines,models,fixes,c);
+  //anneal_quad(quad,lines,models, fixes, c);
   int ndim=lines[0].direction.size();
   quad.get_hessian(c,ndim,hess);
   quad.get_minimum(c,ndim,min);
 
+  if(gradients.size() > 0) { 
+    vector <double> cg=c;
+    cg.erase(cg.begin());
+    test_hess_gradients(gradients,cg);
+  }
 } 
+
+//----------------------------------------------------------------------
+
 void Minimum_inference::saveState(ostream & os) { } 
+
+//######################################################################
+
+void Search_data::update_directions(vector < vector < double> > & hess, 
+                       vector <double> & evals_return) { 
+  int n=hess.size();
+  assert(hess[0].size()==n);
+  assert(directions.size()==n);
+  assert(directions[0].size()==n);
+  
+  Array2 <double> H(n,n);
+  Array2 <double> Ev(n,n);
+  Array1 <double> evals(n);
+  
+  for(int i=0;i < n; i++) {
+    for(int j=0; j< n; j++) { 
+      H(i,j)=hess[i][j];
+    }
+  }
+  EigenSystemSolverRealSymmetricMatrix(H,evals, Ev);
+  evals_return.resize(n);
+  for(int i=0; i< n;i++) evals_return[i]=evals[i];
+  for(int i=0; i< n; i++) { 
+    for(int j=0; j< n; j++) { 
+      directions[i][j]=Ev(j,i); 
+    }
+  }
+  
+
+}
+
+//######################################################################
 
