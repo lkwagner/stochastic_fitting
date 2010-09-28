@@ -2,6 +2,7 @@
 #define SAMPLE_H_INCLUDED
 #include "Line_model.h"
 #include "Quad_plus_line.h"
+#include "Hess_grad.h"
 #include <iostream>
 using namespace std;
 
@@ -37,11 +38,14 @@ void optimize_quad(Quad_plus_line & quad, vector <Line_data> & data, vector <Lin
 void shake_quad(Quad_plus_line & quad, vector <Line_data> & data, 
                 vector <Line_model *> & models, vector <Fix_information> & fixes,
                 vector <double> & c);  
-void anneal_quad(Quad_plus_line & quad, vector <Line_data> & data, 
-                    vector <Line_model *> & models, vector <Fix_information> & fixes,
-                         vector <double> & c) ;
 //startc can be a reasonable guess from a previous fit
 void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model *> & models, 
             Fit_info & finfo, vector <double> & startc, vector <Walker> & allwalkers, int verbose=1);
+
+void shake_quad_grad(vector<Line_data> & lines, 
+    vector<Line_model *> & models,
+    vector<Gradient_data> & gradients, vector<double> & c);
+
+
 
 #endif //SAMPLE_H_INCLUDED

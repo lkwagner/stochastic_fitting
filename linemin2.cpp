@@ -10,7 +10,7 @@ int main(int argc, char ** argv) {
   int nit=15; 
   
   string dummy;
-  int ndim=1;
+  int ndim=2;
   Data_generator * pes=new Random_quadratic(ndim);
   Line_model * mod=new Cubic_model;
   vector <double> currmin;

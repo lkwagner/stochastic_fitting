@@ -42,15 +42,17 @@ void Minimum_inference::calcHess(double trust_rad, double & E0, vector <double> 
   Quad_plus_line quad;
   vector <Fix_information> fixes;
   shake_quad(quad,lines,models,fixes,c);
-  //anneal_quad(quad,lines,models, fixes, c);
   int ndim=lines[0].direction.size();
   quad.get_hessian(c,ndim,hess);
   quad.get_minimum(c,ndim,min);
 
   if(gradients.size() > 0) { 
-    vector <double> cg=c;
-    cg.erase(cg.begin());
-    test_hess_gradients(gradients,cg);
+    //vector <double> cg=c;
+    //cg.erase(cg.begin());
+    //test_hess_gradients(gradients,cg);
+    shake_quad_grad(lines,models,gradients,c);
+    quad.get_hessian(c,ndim,hess);
+    quad.get_minimum(c,ndim,min);
   }
 } 
 

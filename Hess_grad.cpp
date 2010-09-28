@@ -27,14 +27,21 @@ double Hess_grad::prob(const vector <Gradient_data> & data, const vector <double
 
    double prob=0;
    vector <double> mod_grad; mod_grad.resize(n);
-   for(vector<double>::iterator i=mod_grad.begin(); i!=mod_grad.end(); i++) *i=0.0;
+  
+   Array2 <double> hess(n,n);
+   int count=n;
+   for(int i=0; i<n; i++) { 
+     for(int j=i; j< n; j++) { 
+       hess(i,j)=hess(j,i)=c[count++];
+     }
+   }
    
    for(vector<Gradient_data>::const_iterator g=data.begin(); g!=data.end(); g++) {
-     int count=n;
+     for(vector<double>::iterator i=mod_grad.begin(); i!=mod_grad.end(); i++) *i=0.0;
+     
      for(int i=0;i < n; i++) { 
-       for(int j=i; j < n; j++) { 
-          mod_grad[i]+=2*c[count]*(g->x[j]-c[j]);
-          //mod_grad[j]+=c[count]*(g->x[i]-c[i]);
+       for(int j=0; j < n; j++) { 
+          mod_grad[i]+=2.0*hess(i,j)*(g->x[j]-c[j]);
           count++;
        }
      }
@@ -61,13 +68,19 @@ double Hess_grad::grad_prob(const vector <Gradient_data> & data, const vector <d
     }
   }
 
-  cout << "hesss " << hess(0,0) << endl;
+  //for(int i=0; i< n; i++) { 
+  //  cout << "hess ";
+  //  for(int j=0; j< n; j++) { 
+  //    cout << hess(i,j) << " ";
+  //  }
+  //  cout << endl;
+  //}
   vector <double> tmpvec(n);
   for(vector<Gradient_data>::const_iterator g=data.begin(); g!=data.end(); g++) { 
     for(int i=0; i< n; i++) { 
       tmpvec[i]=0.0;
       for(int j=0; j< n; j++) { 
-        tmpvec[i]+=hess(i,j)*(g->x[j]-c[j]);
+        tmpvec[i]+=2.0*hess(i,j)*(g->x[j]-c[j]);
       }
       tmpvec[i]-=g->grad[i];
       tmpvec[i]/=g->sigma[i]*g->sigma[i];
@@ -75,14 +88,16 @@ double Hess_grad::grad_prob(const vector <Gradient_data> & data, const vector <d
 
     for(int i=0; i< n; i++) { 
       for(int j=0; j< n; j++) { 
-        grad[j]+=tmpvec[i]*hess(i,j);
+        grad[j]+=2.0*tmpvec[i]*hess(i,j);
       }
     }
 
     count=n;
     for(int i=0; i< n; i++) { 
       for(int j=i; j< n; j++) { 
-        grad[count++]-=tmpvec[i]*(g->x[j]-c[j]);
+        grad[count]-=2.0*tmpvec[i]*(g->x[j]-c[j]);
+        if(i!=j) grad[count]-=2.0*tmpvec[j]*(g->x[i]-c[i]);
+        count++;
       }
     }
   }
@@ -112,7 +127,7 @@ void test_hess_gradients(const vector <Gradient_data> & data, const vector<doubl
     double sv=c[i];
     cp[i]+=del;
     double d1=grad_hess.prob(data,cp);
-    cp[i]-=del;
+    cp[i]-=2.0*del;
     double d2=grad_hess.prob(data,cp);
     double g_finite=(d1-d2)/(2*del);
     cp[i]=sv;
