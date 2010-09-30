@@ -39,7 +39,7 @@ void find_good_guess(Line_model & mod, const Line_data & data,  Fix_information 
   
   double best_p=-1e99;
   
-  int nit=10000;
+  int nit=1000;
   int nparms=c.size();
   
   
@@ -292,41 +292,60 @@ double optimize_quad_grad(vector<Line_data> & lines,
 
 void shake_quad_grad(vector<Line_data> & lines, 
     vector<Line_model *> & models,
-    vector<Gradient_data> & gradients, vector<double> & c) {
+    vector<Gradient_data> & gradients, vector<double> & c, int restart) {
 
   Quad_plus_line quad;
   Hess_grad gquad;
-  quad.generate_guess(lines,models,c);
-  vector<double> cg=c;
-  cg.erase(cg.begin());
-  test_hess_gradients(gradients,cg);
-  double best_p=optimize_quad_grad(lines,models,gradients,c);
-  cg=c; cg.erase(cg.begin());
-  test_hess_gradients(gradients,cg);
-  cout << "initial prob " << best_p << endl;
-  vector <double> best_c=c;
+  vector <double> c_tmp;
+  quad.generate_guess(lines,models,c_tmp);
+  double p_tmp=optimize_quad_grad(lines,models,gradients,c_tmp);
+  double best_p;vector<double> best_c;
+
+  best_p=p_tmp;
+  best_c=c_tmp;
+  int nstarts=20;
+  for(int i=0; i< nstarts; i++) { 
+     quad.generate_guess(lines,models,c_tmp);
+     p_tmp=optimize_quad_grad(lines,models,gradients,c_tmp);
+     if(p_tmp > best_p && !isnan(p_tmp)) {
+       best_p=p_tmp;
+       best_c=c_tmp;
+     }
+  }
+
+  if(restart) { 
+    double restart_p=optimize_quad_grad(lines,models,gradients,c);
+    cout << "restart_p " << restart_p << " from intial guess " << best_p << endl;
+    if( (restart_p > best_p) &&  !isnan(restart_p)) {
+      best_p=restart_p;
+      best_c=c;
+    }
+  }
+  int ndim=lines[0].direction.size(); 
+  int nfit=3*lines.size()+ndim*gradients.size();
+
+  cout << "initial prob " << best_p/nfit << endl;
 
  
   double sig=0.6;
   int nit=10;
   int nparms=c.size();
   int nsubit=nparms;
-  int ndim=lines[0].direction.size();
   cout << "individual shake " << endl;
-  for(int i=0; i< nit*nsubit; i++) { 
-    int j=int(best_c.size()*rng.ulec());
-    c=best_c;
-    c[j]=best_c[j]*(1+sig*rng.gasdev());
-    double p=optimize_quad_grad(lines,models,gradients,c);
-    if( (p > best_p && quad.has_minimum(c,ndim)) || isnan(best_p) ) { 
-      best_c=c;
-      best_p=p;
-      if(1) { 
-        cout << " it " << i << " ";
-        cout << p  << endl;
+    for(int i=0; i< nit*nsubit; i++) { 
+      int j=int(best_c.size()*rng.ulec());
+      c=best_c;
+      c[j]=best_c[j]*(1+sig*rng.gasdev());
+      double p=optimize_quad_grad(lines,models,gradients,c);
+      if( (p > best_p && quad.has_minimum(c,ndim)) && !isnan(p) ) { 
+        best_c=c;
+        best_p=p;
+        if(1) { 
+          cout << " it " << i << " " << p/nfit << endl;
+        }
       }
     }
-  }
+  
   
   c=best_c;
 

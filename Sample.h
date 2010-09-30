@@ -44,7 +44,7 @@ void sample(Quad_plus_line & quad, vector <Line_data> & data, vector <Line_model
 
 void shake_quad_grad(vector<Line_data> & lines, 
     vector<Line_model *> & models,
-    vector<Gradient_data> & gradients, vector<double> & c);
+    vector<Gradient_data> & gradients, vector<double> & c,int restart);
 
 
 

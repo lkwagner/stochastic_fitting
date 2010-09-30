@@ -114,12 +114,8 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
   int count=0;
   c[count++]=min_en;
   for(int i=0; i< ndim; i++) { 
-    //c[i+1]= data[ndata-1].start_pos[i]*(1+.5*rng.gasdev());
     c[count++]=min_en_pos[i];
-    //cout << min_en_pos[i] << " ";
   }
-  //cout << endl;
-
   
   
   vector <Fit_info> finfo(nlines);
@@ -149,19 +145,6 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
       for(int k=0; k < ndim; k++) 
         H(i,k)+=Q(i,j)*curves[j+nlines-ndim]*Qinv(j,k);
   
-  /*
-  Minimize_curve_err  min((ndim+1)*ndim/2,1,0.01,100,1);
-  min.data=data;
-  min.ndim=ndim;
-  min.curve=curves;
-  vector <double> hess;
-  min.optimize(hess);
-  for(int i=0; i< (ndim+1)*ndim/2; i++) c[count++]=hess[i];
-  */
-  /*
-  Array2 <double> H(ndim, ndim);
-  generate_posdef_matrix(ndim,H);
-  */
   assert(count==ndim+1);
   for(int i=0; i< ndim; i++) { 
     for(int j=i; j< ndim; j++) { 
@@ -176,8 +159,36 @@ void Quad_plus_line::generate_guess(const vector <Line_data> & data,
     models[i]->downconvert_c(fixes[i],guesses[i],c_tmp);
     c.insert(c.end(),c_tmp.begin(), c_tmp.end());
   }
-   
-  
+}
+//----------------------------------------------------------------------------
+void Quad_plus_line::generate_guess(const vector <Line_data> & data, const vector <Line_model *> & models, 
+    const double e0, const vector <double> & guess_min, const vector < vector <double> > & guess_hess,
+    vector <double> & c) { 
+  int ndim=data[0].direction.size();
+  int nlines=data.size();
+  for(vector<Line_data>::const_iterator i=data.begin(); i!=data.end(); i++) {
+    assert(i->direction.size()==ndim);
+    assert(i->start_pos.size()==ndim);
+  }
+  assert(models.size()==nlines);
+  assert(guess_hess.size()>=ndim);
+  assert(guess_hess[0].size() >=ndim);
+  assert(guess_min.size() >=ndim);
+  vector <Fix_information> fixes(nlines);
+  int nparms_quad=1+ndim+(ndim+1)*ndim/2;
+  c.resize(nparms_quad);
+  c[0]=e0;
+  for(int i=0; i< ndim; i++) c[i+1]=guess_min[i];
+  int count=ndim+1;
+  for(int i=0; i< ndim; i++) { 
+    for(int j=i; j< ndim; j++) c[count++]=guess_hess[i][j];
+  }
+  set_fixes(data, c, fixes);
+  for(int i=0; i < nlines; i++) { 
+    vector <double> c_tmp;
+    models[i]->generate_guess(data[i],fixes[i],c_tmp);
+    c.insert(c.end(), c_tmp.begin(), c_tmp.end());
+  }
 }
 
 //-----------------------------------------------------------------------------

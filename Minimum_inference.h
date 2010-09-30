@@ -41,7 +41,7 @@ class Minimum_inference {
 
     //Don't modify the internal state, only return information
     void calcHess(double trust_rad, double & E0, vector <double> & min, 
-        vector < vector < double > > & hess);
+        vector < vector < double > > & hess,int restart);
     void saveState(ostream & os);
   private:
     vector <Line_data> lines;

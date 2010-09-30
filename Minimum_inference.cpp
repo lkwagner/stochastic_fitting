@@ -36,24 +36,23 @@ void Minimum_inference::readState(istream & is) { }
 //----------------------------------------------------------------------
 
 void Minimum_inference::calcHess(double trust_rad, double & E0, vector <double> & min, 
-    vector < vector < double > > & hess) {
+    vector < vector < double > > & hess,int restart) {
   vector <double> c;
-  double best_err=1e18;
-  Quad_plus_line quad;
-  vector <Fix_information> fixes;
-  shake_quad(quad,lines,models,fixes,c);
   int ndim=lines[0].direction.size();
+  Quad_plus_line quad;
+  if(gradients.size() > 0) { 
+    if(restart) {
+      quad.generate_guess(lines,models, E0,min,hess,c);
+    }
+    shake_quad_grad(lines,models,gradients,c,restart);
+  }
+  else { 
+    Quad_plus_line quad;
+    vector <Fix_information> fixes;
+    shake_quad(quad,lines,models,fixes,c);
+  }
   quad.get_hessian(c,ndim,hess);
   quad.get_minimum(c,ndim,min);
-
-  if(gradients.size() > 0) { 
-    //vector <double> cg=c;
-    //cg.erase(cg.begin());
-    //test_hess_gradients(gradients,cg);
-    shake_quad_grad(lines,models,gradients,c);
-    quad.get_hessian(c,ndim,hess);
-    quad.get_minimum(c,ndim,min);
-  }
 } 
 
 //----------------------------------------------------------------------

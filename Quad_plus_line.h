@@ -12,6 +12,9 @@ public:
   
   void generate_guess(const vector <Line_data> & data, const vector <Line_model *> & models,
                       vector <double> & c);
+  void generate_guess(const vector <Line_data> & data, const vector <Line_model *> & models, 
+      const double e0, const vector <double> & guess_min, const vector < vector <double> > & guess_hess,
+      vector <double> & c);
   double prob(const vector <Line_data> & data, const vector <Line_model * > & models,
               const vector <double> & c, vector <Fix_information> & fixes);
   double delta_prob(const vector <Line_data> & data, const vector <Line_model * > & models,   

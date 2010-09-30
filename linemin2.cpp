@@ -10,7 +10,7 @@ int main(int argc, char ** argv) {
   int nit=15; 
   
   string dummy;
-  int ndim=2;
+  int ndim=6;
   Data_generator * pes=new Random_quadratic(ndim);
   Line_model * mod=new Cubic_model;
   vector <double> currmin;
@@ -24,6 +24,7 @@ int main(int argc, char ** argv) {
  
   
 
+  vector <vector <double> > hess; double e0; vector <double> hess_min;
 
   for(int it=0; it < nit; it++) { 
     for(int d=0; d< ndim; d++) { 
@@ -37,8 +38,8 @@ int main(int argc, char ** argv) {
       }
     }
 
-    vector <vector <double> > hess; double e0; vector <double> hess_min;
-    min_infer.calcHess(search.trust_rad,e0,hess_min,hess);
+    int restart=1; if(it==0) restart=0;
+    min_infer.calcHess(search.trust_rad,e0,hess_min,hess,restart);
     cout << "hess: " << endl;
     for(int i=0; i< ndim; i++) { 
       cout << "hess: " ;
