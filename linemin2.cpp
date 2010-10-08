@@ -10,9 +10,9 @@ int main(int argc, char ** argv) {
   int nit=15; 
   
   string dummy;
-  int ndim=6;
+  int ndim=15;
   Data_generator * pes=new Random_quadratic(ndim);
-  Line_model * mod=new Cubic_model;
+  Line_model * mod=new Quadratic_model;
   vector <double> currmin;
  
   Minimum_inference min_infer;

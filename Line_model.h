@@ -94,6 +94,7 @@ public:
                                vector <double> & c_out);
 
   virtual double curve(const vector <double> & c);
+  virtual double funcmin(const vector<double> & c);
   virtual const void downconvert_c(const Fix_information &, 
                                    const vector <double> & c_in, vector <double> & c_out);
   

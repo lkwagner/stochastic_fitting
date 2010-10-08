@@ -249,6 +249,12 @@ const void Quadratic_model::downconvert_c(const Fix_information & fix,
   c_out.resize(0);
   assert(c_in.size() >= 3);
 }
+//------------------------------------------------------------------------------
+
+double Quadratic_model::funcmin(const vector <double> & c) { 
+  return c[0];
+}
+
 
 //------------------------------------------------------------------------------
 
