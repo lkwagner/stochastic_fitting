@@ -31,6 +31,7 @@ public:
                    vector < vector < double> > & H);
   void get_minimum(const vector <double> & c, int ndim, 
                    vector < double>  & m);
+  double get_min_val(const vector <double> & c, int ndim) { return c[0]; } 
     
   bool has_minimum(const vector <double> & c, int ndim);
   

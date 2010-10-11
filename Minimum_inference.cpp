@@ -53,6 +53,7 @@ void Minimum_inference::calcHess(double trust_rad, double & E0, vector <double> 
   }
   quad.get_hessian(c,ndim,hess);
   quad.get_minimum(c,ndim,min);
+  E0=quad.get_min_val(c,ndim);
 } 
 
 //----------------------------------------------------------------------
