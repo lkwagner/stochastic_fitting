@@ -57,6 +57,7 @@ public:
   virtual void eval(const vector <double> & x, const double desired_err, 
                     double & f, double & err);
   virtual int ndim()  { return n; } 
+  virtual int gradient(const vector <double>&x, vector<double>&grad,vector<double>&err);
   MonteCarlo_caller(istream & is);
 private:
   int n;
@@ -65,6 +66,7 @@ private:
   string command; //command should take an argument that controls the number of blocks
                   //x will be written to mc_input in space-delimited format
                   //expects an output in mc_output of the function value and its error bar
+  string force_command; //x will be written to mc_input.  expects an output in mc_output of the function value and its error bar  force_command=noforce means no force caller
 };
 
 

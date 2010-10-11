@@ -8,7 +8,7 @@ inline void append_number(string & str, int num){
 
 
 MonteCarlo_caller::MonteCarlo_caller(istream & is) { 
-  is >> n >> estimated_rms >> command;
+  is >> n >> estimated_rms >> command >> force_command;
   min_blocks=10;
 }
 
@@ -44,5 +44,28 @@ void MonteCarlo_caller::eval(const vector <double> & x, const double desired_err
   } while(it < maxit && (err-desired_err)/desired_err > tol ); 
   //note that we don't care if the err is smaller than desired, only larger
 }
+
+//----------------------------------------------------------------------
+int MonteCarlo_caller::gradient(const vector <double>&x, 
+    vector<double>&grad,vector<double>&err) { 
+  if(force_command=="noforce") return 0;
+  ofstream out("mc_input");
+  for(vector<double>::const_iterator i=x.begin(); i!=x.end(); i++) out << *i << " ";
+  out << endl;
+  out.close();
+
+  if(system(force_command.c_str())) { 
+    cout << "Error evaluating gradient!" << endl;
+    exit(1);
+  }
+  ifstream in("mc_output");
+  grad.resize(x.size()); err.resize(x.size());
+  for(vector<double>::iterator i=grad.begin(); i!=grad.end(); i++) in >> *i;
+  for(vector<double>::iterator i=err.begin(); i!= err.end(); i++) in >> *i;
+  in.close();
+
+
+}
+
 
 //#########################################################################
