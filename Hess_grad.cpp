@@ -2,6 +2,39 @@
 #include "Hess_grad.h"
 #include <cassert>
 #include "Array.h"
+typedef vector<double>::iterator dit_t;
+
+//----------------------------------------------------------------------
+
+void Gradient_data::store(ostream  & os) { 
+  int ndim=grad.size();
+  os << "ndim " << ndim << endl;
+  os << "x "; for(vector<double>::iterator i=x.begin(); i!=x.end(); i++) os << *i << " ";
+  os << endl;
+  os << "grad "; for(vector<double>::iterator i=grad.begin(); i!=grad.end(); i++) os << *i << " ";
+  os << endl;
+  os << "sigma "; for(vector<double>::iterator i=sigma.begin(); i!=sigma.end(); i++) os << *i << " ";
+  os << endl;
+
+}
+//----------------------------------------------------------------------
+
+void Gradient_data::read(istream & is) { 
+  int ndim; string dummy;
+  is >> dummy; assert(dummy=="ndim");
+  x.resize(ndim);
+  grad.resize(ndim);
+  sigma.resize(ndim);
+  is >> dummy; assert(dummy=="x");
+  for(dit_t i=x.begin(); i!=x.end(); i++) is >> *i;
+  is >> dummy; assert(dummy=="grad");
+  for(dit_t i=grad.begin(); i!=grad.end(); i++) is >> *i;
+  is >> dummy; assert(dummy=="sigma");
+  for(dit_t i=sigma.begin(); i!=sigma.end(); i++) is >> *i;
+  
+
+}
+
 //----------------------------------------------------------------------
 void Hess_grad::generate_guess(const vector <Gradient_data> & data, vector <double> & c) { 
   int ndata=data.size();

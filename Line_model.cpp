@@ -2,6 +2,8 @@
 #include "ulec.h"
 
 typedef vector<double>::const_iterator cdit_t;
+typedef vector<double>::iterator dit_t;
+
 //###############################################################################
 
 void Line_data::store(ostream & os) { 
@@ -21,7 +23,20 @@ void Line_data::store(ostream & os) {
 }
 
 void Line_data::read(istream & is) { 
-  
+   string dummy; int ndim, ndata;
+   is >> dummy >> ndim; assert(dummy=="ndim");
+   is >> dummy >> ndata;assert(dummy=="ndata");
+   direction.resize(ndim); 
+   start_pos.resize(ndim);
+   data.resize(ndata);
+   is >> dummy; assert(dummy=="direction");
+   for(dit_t i=direction.begin(); i!=direction.end(); i++) is >> *i;
+   is >> dummy; assert(dummy=="start_pos");
+   for(dit_t i=start_pos.begin(); i!=start_pos.end(); i++) is >> *i;
+   for(vector<Data_point>::iterator i=data.begin(); i!=data.end(); i++) { 
+     is >> dummy; assert(dummy=="data");
+     is>> i->t >> i->val >> i->inverr;
+   }
 }
 
 //###############################################################################

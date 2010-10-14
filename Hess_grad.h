@@ -7,6 +7,8 @@ class Gradient_data {
     vector <double> grad;
     vector <double> x;  //position at which the gradient was evaluated
     vector <double> sigma; //uncertainty..
+    void store(ostream  & os);
+    void read(istream & is);
 };
 
 

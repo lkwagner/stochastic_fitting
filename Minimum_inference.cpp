@@ -58,7 +58,16 @@ void Minimum_inference::calcHess(double trust_rad, double & E0, vector <double> 
 
 //----------------------------------------------------------------------
 
-void Minimum_inference::saveState(ostream & os) { } 
+void Minimum_inference::saveState(ostream & os) {
+  for(vector<Line_data>::iterator i=lines.begin(); i!= lines.end(); i++) {
+    os << "LINE "<< endl;
+    i->store(os);
+  }
+  for(vector<Gradient_data>::iterator i=gradients.begin(); i!=gradients.end(); i++) { 
+    os << "GRADIENT" << endl;
+    i->store(os);
+  }
+} 
 
 //######################################################################
 
