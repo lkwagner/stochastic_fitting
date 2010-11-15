@@ -1,7 +1,7 @@
 #include "Minimum_inference.h"
 using namespace std;
 
-
+//----------------------------------------------------------------------
 void proj(vector <double> & u, vector<double> & v, vector <double> & p) { 
   int n=u.size();
   assert(u.size()==v.size());
@@ -16,7 +16,7 @@ void proj(vector <double> & u, vector<double> & v, vector <double> & p) {
   }
 
 }
-
+//----------------------------------------------------------------------
 //orthogonalize vector k with respect to vectors 0-k-1
 void gram_schmidt(vector <vector <double> > & vecs, int k) { 
   int ndim=vecs.size();
@@ -34,6 +34,7 @@ void gram_schmidt(vector <vector <double> > & vecs, int k) {
   for(int d=0; d< ndim; d++) vecs[k][d]=u[d]/norm;
 }
 
+//----------------------------------------------------------------------
 
 int main(int argc, char ** argv) { 
   
