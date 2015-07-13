@@ -1,0 +1,7 @@
+iterations  40
+cubic_mod
+random_cubic 3 .01
+trust_radius 0.2
+currmin 0 0 0 
+nsweeps_keep 50 
+
